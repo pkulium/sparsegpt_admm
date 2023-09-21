@@ -8,11 +8,11 @@ import transformers
 from quant import *
 
 
-DEBUG = False 
+DEBUG = True
 
 torch.backends.cuda.matmul.allow_tf32 = False
 torch.backends.cudnn.allow_tf32 = False
-
+from utils import *
 
 class SparseGPT:
 
@@ -140,6 +140,34 @@ class SparseGPT:
         if isinstance(self.layer, transformers.Conv1D):
             W = W.t()
         self.layer.weight.data = W.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
+        if DEBUG:
+            print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
+
+    def admmprune(
+        self, sparsity, prunen=0, prunem=0, blocksize=128, percdamp=.01
+    ):
+        W = self.layer.weight.data.clone()
+        if isinstance(self.layer, nn.Conv2d):
+            W = W.flatten(1)
+        if isinstance(self.layer, transformers.Conv1D):
+            W = W.t()
+        W = W.float()
+
+        if hasattr(self, 'quantizer'):
+            if not self.quantizer.ready():
+                self.quantizer.find_params(W, weight=True)
+
+        tick = time.time()
+
+        del self.H
+        model = self.layer
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        optimizer = PruneAdam(model.named_parameters(), lr=self.lr, eps=self.adam_epsilon)
+        self.l1 = False
+        train(self, model, device, self.inps, self.out1, optimizer)
+        mask = apply_l1_prune(model, device, self) if self.l1 else apply_prune(model, device, self)
+        print_prune(model)
+        
         if DEBUG:
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
 
