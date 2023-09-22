@@ -16,8 +16,12 @@ def regularized_nll_loss(args, model, output, target):
 
 
 def admm_loss(args, device, model, Z, U, output, target):
+    import torch.nn as nn
+    criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
+    loss = criterion(output, target)  # Compute the loss
+    
     idx = 0
-    loss = F.nll_loss(output, target)
+    # loss = F.nll_loss(output, target)
     for name, param in model.named_parameters():
         if name.split('.')[-1] == "weight":
             u = U[idx].to(device)
@@ -169,6 +173,14 @@ from tqdm import tqdm
 def train(args, model, device, train_loader, test_loader, optimizer):
     Z, U = initialize_Z_and_U(model)
     num_epochs = 100
+
+    data = train_loader.squeeze(0)  # Now data has shape [2048, 768]
+    output = test_loader.squeeze(0)  # Now output has shape [2048, 768]
+    from torch.utils.data import TensorDataset, DataLoader
+
+    dataset = TensorDataset(data, output)
+    train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+
     for epoch in range(num_epochs):
         model.train()
         print('Epoch: {}'.format(epoch + 1))

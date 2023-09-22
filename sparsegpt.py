@@ -165,6 +165,8 @@ class SparseGPT:
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self.lr = 1e-3
         self.adam_epsilon = 1e-8
+        self.alpha = 5e-4
+        self.rho = 1e-2
         optimizer = PruneAdam(model.named_parameters(), lr=self.lr, eps=self.adam_epsilon)
         self.l1 = False
         train(self, model, device, self.inp1, self.out1, optimizer)
