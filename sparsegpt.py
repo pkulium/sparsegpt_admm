@@ -165,7 +165,6 @@ class SparseGPT:
         in_features = self.layer.in_features  # Get the number of input features of the old model
         out_features = self.layer.out_features  # Get the number of output features of the old model
         
-        import torch.nn as nn
 
         model = nn.Linear(in_features, out_features)  # Create a new linear model with the same specifications
         model.weight.data = self.layer.weight.data.clone()  # Copy the weights from the old model to the new model
