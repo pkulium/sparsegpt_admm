@@ -189,7 +189,7 @@ def train(args, model, device, origin_input, origin_output, optimizer):
     with torch.enable_grad():
         model.train()
         for epoch in range(num_epochs):
-            print('Epoch: {}'.format(epoch + 1))
+            # print('Epoch: {}'.format(epoch + 1))
             for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
                 data, target = data.to(device), target.to(device)
                 # data.requires_grad = True
