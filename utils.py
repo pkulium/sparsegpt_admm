@@ -175,11 +175,6 @@ def train(args, model, device, origin_input, origin_output, optimizer):
     num_epochs = 100
     model.train()
 
-    for param in model.parameters():
-        param.requires_grad = True
-    origin_input.requires_grad = True
-    origin_output.requires_grad = True
-
     data = origin_input.squeeze(0)  # Now data has shape [2048, 768]
     output = origin_output.squeeze(0)  # Now output has shape [2048, 768]
     # Assuming `data` is your input tensor and `model` is your model
@@ -196,6 +191,8 @@ def train(args, model, device, origin_input, origin_output, optimizer):
         print('Epoch: {}'.format(epoch + 1))
         for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
             data, target = data.to(device), target.to(device)
+            data.requires_grad = True
+            target.requires_grad = True
             optimizer.zero_grad()
             output = model(data)
             loss = admm_loss(args, device, model, Z, U, output, target)
