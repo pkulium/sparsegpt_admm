@@ -168,8 +168,8 @@ class SparseGPT:
 
         model = nn.Linear(in_features, out_features)  # Create a new linear model with the same specifications
         model = model.to(self.dev)
-        model.weight = model.weight.to(self.layer.weight.data.dtype)
-        model.bias = model.bias.to(self.layer.bias.data.dtype)
+        model.weight.data = model.weight.data.to(self.layer.weight.data.dtype)
+        model.bias.data = model.bias.data.to(self.layer.bias.data.dtype)
         model.weight.data = self.layer.weight.data.clone()  # Copy the weights from the old model to the new model
         model.bias.data = self.layer.bias.data.clone()  # Copy the weights from the old model to the new model
         self.lr = 1e-3
