@@ -169,6 +169,7 @@ class SparseGPT:
         model = nn.Linear(in_features, out_features)  # Create a new linear model with the same specifications
         model = model.to(self.dev)
         model.weight.data = self.layer.weight.data.clone()  # Copy the weights from the old model to the new model
+        model.weight.data = model.weight.data.dtype(torch.float16)
         self.lr = 1e-3
         self.adam_epsilon = 1e-8
         self.alpha = 5e-4
