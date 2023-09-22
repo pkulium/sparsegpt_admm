@@ -189,11 +189,14 @@ def train(args, model, device, train_loader, test_loader, optimizer):
     dataset = TensorDataset(data, output)
     train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
 
+    model.train()
     for epoch in range(num_epochs):
-        model.train()
         print('Epoch: {}'.format(epoch + 1))
         for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
             data, target = data.to(device), target.to(device)
+            data.requires_grad_(True)
+            target.requires_grad_(True)
+
             optimizer.zero_grad()
             output = model(data)
             loss = admm_loss(args, device, model, Z, U, output, target)
