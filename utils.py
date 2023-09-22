@@ -173,6 +173,9 @@ from tqdm import tqdm
 def train(args, model, device, train_loader, test_loader, optimizer):
     Z, U = initialize_Z_and_U(model)
     num_epochs = 100
+    
+    for param in model.parameters():
+        param.requires_grad = True
 
     data = train_loader.squeeze(0)  # Now data has shape [2048, 768]
     output = test_loader.squeeze(0)  # Now output has shape [2048, 768]
