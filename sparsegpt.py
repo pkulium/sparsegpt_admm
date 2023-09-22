@@ -169,6 +169,7 @@ class SparseGPT:
         self.rho = 1e-2
         optimizer = PruneAdam(model.named_parameters(), lr=self.lr, eps=self.adam_epsilon)
         self.l1 = False
+        self.l2 = False
         train(self, model, device, self.inp1, self.out1, optimizer)
         mask = apply_l1_prune(model, device, self) if self.l1 else apply_prune(model, device, self)
         print_prune(model)
