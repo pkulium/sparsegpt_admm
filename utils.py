@@ -172,7 +172,7 @@ from tqdm import tqdm
 
 def train(args, model, device, origin_input, origin_output, optimizer):
     Z, U = initialize_Z_and_U(model)
-    num_epochs = 500
+    num_epochs = 200
 
     data = origin_input.squeeze(0)  # Now data has shape [2048, 768]
     output = origin_output.squeeze(0)  # Now output has shape [2048, 768]
