@@ -188,7 +188,7 @@ class SparseGPT:
         del model
         if DEBUG:
             print('error for admm:')
-            print(torch.sum((model(self.inp1) - self.out1) ** 2))
+            print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
 
     def free(self):
         if DEBUG:
