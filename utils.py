@@ -177,9 +177,9 @@ def train(args, model, device, origin_input, origin_output, optimizer):
     data = origin_input.squeeze(0)  # Now data has shape [2048, 768]
     output = origin_output.squeeze(0)  # Now output has shape [2048, 768]
     # Assuming `data` is your input tensor and `model` is your model
-    # data = data.to(torch.float32)  # Convert data to Float
-    # output = output.to(torch.float32)  # Now output has shape [2048, 768]
-    # model = model.to(torch.float32)  # Convert model parameters to Float
+    data = data.to(torch.float32)  # Convert data to Float
+    output = output.to(torch.float32)  # Now output has shape [2048, 768]
+    model = model.to(torch.float32)  # Convert model parameters to Float
 
     from torch.utils.data import TensorDataset, DataLoader
 
