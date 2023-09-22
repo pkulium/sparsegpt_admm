@@ -185,6 +185,7 @@ class SparseGPT:
         model.bias.data = model.bias.data.to(torch.float16)
         self.layer.weight.data = model.weight.data.clone()
         self.layer.bias.data = model.bias.data.clone()
+        del model
         if DEBUG:
             print('error for admm:')
             print(torch.sum((model(self.inp1) - self.out1) ** 2))
