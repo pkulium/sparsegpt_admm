@@ -173,7 +173,6 @@ from tqdm import tqdm
 def train(args, model, device, origin_input, origin_output, optimizer):
     Z, U = initialize_Z_and_U(model)
     num_epochs = 100
-    model.train()
 
     data = origin_input.squeeze(0)  # Now data has shape [2048, 768]
     output = origin_output.squeeze(0)  # Now output has shape [2048, 768]
@@ -187,21 +186,23 @@ def train(args, model, device, origin_input, origin_output, optimizer):
     dataset = TensorDataset(data, output)
     train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
 
-    for epoch in range(num_epochs):
-        print('Epoch: {}'.format(epoch + 1))
-        for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
-            data, target = data.to(device), target.to(device)
-            # data.requires_grad = True
-            # target.requires_grad = True
-            optimizer.zero_grad()
-            output = model(data)
-            loss = admm_loss(args, device, model, Z, U, output, target)
-            loss.backward()
-            optimizer.step()
-        X = update_X(model)
-        Z = update_Z_l1(X, U, args) if args.l1 else update_Z(X, U, args)
-        U = update_U(U, X, Z)
-        print_convergence(model, X, Z)
+    with torch.enable_grad():
+        model.train()
+        for epoch in range(num_epochs):
+            print('Epoch: {}'.format(epoch + 1))
+            for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
+                data, target = data.to(device), target.to(device)
+                # data.requires_grad = True
+                # target.requires_grad = True
+                optimizer.zero_grad()
+                output = model(data)
+                loss = admm_loss(args, device, model, Z, U, output, target)
+                loss.backward()
+                optimizer.step()
+            X = update_X(model)
+            Z = update_Z_l1(X, U, args) if args.l1 else update_Z(X, U, args)
+            U = update_U(U, X, Z)
+            print_convergence(model, X, Z)
 
 
 def test(args, model, device, test_loader):

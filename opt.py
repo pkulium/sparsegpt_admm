@@ -26,7 +26,7 @@ def get_opt(model):
     model.seqlen = model.config.max_position_embeddings
     return model
 
-# @torch.no_grad()
+@torch.no_grad()
 def opt_sequential(model, dataloader, dev):
     print('Starting ...')
 
