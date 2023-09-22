@@ -181,8 +181,14 @@ class SparseGPT:
         train(self, model, self.dev, self.inp1.clone(), self.out1.clone(), optimizer)
         mask = apply_l1_prune(model, self.dev, self) if self.l1 else apply_prune(model, self.dev, self)
         print_prune(model)
-        
+        model.weight.data = model.weight.data.to(torch.float16)
+        model.bias.data = model.bias.data.to(torch.float16)
+
+
         if DEBUG:
+            print('error for admm:')
+            print(torch.sum((model(self.inp1) - self.out1) ** 2))
+            print('error for original:')
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
 
     def free(self):
