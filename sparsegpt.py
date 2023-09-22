@@ -167,8 +167,8 @@ class SparseGPT:
         
 
         model = nn.Linear(in_features, out_features)  # Create a new linear model with the same specifications
+        model = model.to(self.dev)
         model.weight.data = self.layer.weight.data.clone()  # Copy the weights from the old model to the new model
-        device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self.lr = 1e-3
         self.adam_epsilon = 1e-8
         self.alpha = 5e-4
@@ -176,8 +176,8 @@ class SparseGPT:
         optimizer = PruneAdam(model.named_parameters(), lr=self.lr, eps=self.adam_epsilon)
         self.l1 = False
         self.l2 = False
-        train(self, model, device, self.inp1, self.out1, optimizer)
-        mask = apply_l1_prune(model, device, self) if self.l1 else apply_prune(model, device, self)
+        train(self, model, self.dev, self.inp1, self.out1, optimizer)
+        mask = apply_l1_prune(model, self.dev, self) if self.l1 else apply_prune(model, self.dev, self)
         print_prune(model)
         
         if DEBUG:
