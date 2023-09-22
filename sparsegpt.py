@@ -33,6 +33,7 @@ class SparseGPT:
         if DEBUG:
             self.inp1 = inp
             self.out1 = out
+            return
         if len(inp.shape) == 2:
             inp = inp.unsqueeze(0)
         tmp = inp.shape[0]
