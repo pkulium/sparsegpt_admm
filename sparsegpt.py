@@ -168,8 +168,6 @@ class SparseGPT:
 
         model = nn.Linear(in_features, out_features)  # Create a new linear model with the same specifications
         model = model.to(self.dev)
-        model.weight.data = model.weight.data.to(self.layer.weight.data.dtype)
-        model.bias.data = model.bias.data.to(self.layer.bias.data.dtype)
         model.weight.data = self.layer.weight.data.clone()  # Copy the weights from the old model to the new model
         model.bias.data = self.layer.bias.data.clone()  # Copy the weights from the old model to the new model
         self.lr = 1e-3
@@ -179,7 +177,7 @@ class SparseGPT:
         optimizer = PruneAdam(model.named_parameters(), lr=self.lr, eps=self.adam_epsilon)
         self.l1 = False
         self.l2 = False
-        self.percent = [0.5, 0.92, 0.991, 0.93]
+        self.percent = [0.8, 0.92, 0.991, 0.93]
         train(self, model, self.dev, self.inp1.clone(), self.out1.clone(), optimizer)
         mask = apply_l1_prune(model, self.dev, self) if self.l1 else apply_prune(model, self.dev, self)
         print_prune(model)
