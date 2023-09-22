@@ -4,8 +4,6 @@ import torch.nn as nn
 import bitsandbytes as bnb
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 
-
-
 model = AutoModelForCausalLM.from_pretrained(
     "facebook/opt-125m", 
     load_in_8bit=True, 
@@ -78,16 +76,6 @@ model.config.use_cache = False
 trainer.train(resume_from_checkpoint = False)
 
 
-
-
-
-
-
-
-
-
-
-
 from transformers import TrainerCallback
 
 class ADMMCallback(TrainerCallback):
@@ -130,10 +118,11 @@ class ADMMCallback(TrainerCallback):
 
 
 # Initialize Z, U, and args as per your requirements
-Z, U, args = initialize_Z_and_U(), initialize_U(), initialize_args()
+Z, U = lora_initialize_Z_and_U(model)
+admm_args = None
 
 # Initialize the callback
-admm_callback = ADMMCallback(Z, U, args)
+admm_callback = ADMMCallback(Z, U, admm_args)
 
 # Initialize the Trainer with your custom callback
 trainer = Trainer(
