@@ -19,7 +19,7 @@ def admm_loss(args, device, model, Z, U, output, target):
     import torch.nn as nn
     criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
     loss = criterion(output, target)  # Compute the loss
-    
+
     idx = 0
     # loss = F.nll_loss(output, target)
     for name, param in model.named_parameters():
@@ -176,6 +176,11 @@ def train(args, model, device, train_loader, test_loader, optimizer):
 
     data = train_loader.squeeze(0)  # Now data has shape [2048, 768]
     output = test_loader.squeeze(0)  # Now output has shape [2048, 768]
+    # Assuming `data` is your input tensor and `model` is your model
+    data = data.to(torch.float32)  # Convert data to Float
+    output = output.to(torch.float32)  # Now output has shape [2048, 768]
+    model = model.to(torch.float32)  # Convert model parameters to Float
+
     from torch.utils.data import TensorDataset, DataLoader
 
     dataset = TensorDataset(data, output)
