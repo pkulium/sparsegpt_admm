@@ -203,6 +203,9 @@ def train(args, model, device, origin_input, origin_output, optimizer):
             Z = update_Z_l1(X, U, args) if args.l1 else update_Z(X, U, args)
             U = update_U(U, X, Z)
             print_convergence(model, X, Z)
+            del X
+    del U 
+    del Z
 
 
 def test(args, model, device, test_loader):
