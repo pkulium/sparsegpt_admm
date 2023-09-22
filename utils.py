@@ -191,8 +191,8 @@ def train(args, model, device, origin_input, origin_output, optimizer):
         print('Epoch: {}'.format(epoch + 1))
         for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
             data, target = data.to(device), target.to(device)
-            data.requires_grad = True
-            target.requires_grad = True
+            # data.requires_grad = True
+            # target.requires_grad = True
             optimizer.zero_grad()
             output = model(data)
             loss = admm_loss(args, device, model, Z, U, output, target)
@@ -202,7 +202,6 @@ def train(args, model, device, origin_input, origin_output, optimizer):
         Z = update_Z_l1(X, U, args) if args.l1 else update_Z(X, U, args)
         U = update_U(U, X, Z)
         print_convergence(model, X, Z)
-        test(args, model, device, test_loader)
 
 
 def test(args, model, device, test_loader):
