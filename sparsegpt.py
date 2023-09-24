@@ -239,13 +239,12 @@ class SparseGPT:
                 # for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
                 for batch_idx, (data, target) in enumerate(train_loader):
                     data, target = data.to(device), target.to(device)
-                    # data.requires_grad = True
-                    # target.requires_grad = True
                     optimizer.zero_grad()
                     output = model(data)
                     loss = criterion(output, target)  # Compute the loss
                     loss.backward()
                     optimizer.step()
+                print(f'loss:{loss}')
 
 
         # with torch.enable_grad():
