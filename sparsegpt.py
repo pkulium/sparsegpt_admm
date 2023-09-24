@@ -224,7 +224,7 @@ class SparseGPT:
         train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
         criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
         optimizer = optim.SGD(
-        model.parameters(),
+        [param for name, param in model.parameters() if not 'mask' in name],
         lr=INIT_LR,
         momentum=0.9,
         weight_decay=WEIGHT_DECAY_RATE)
