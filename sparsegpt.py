@@ -13,6 +13,8 @@ DEBUG = True
 torch.backends.cuda.matmul.allow_tf32 = False
 torch.backends.cudnn.allow_tf32 = False
 from utils import *
+from snip.snip import *
+from snip.train import *
 
 class SparseGPT:
 
@@ -189,6 +191,55 @@ class SparseGPT:
         if DEBUG:
             print('error for admm:')
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
+    
+    def snipprune(
+        self, sparsity, prunen=0, prunem=0, blocksize=128, percdamp=.01
+    ):
+        W = self.layer.weight.data.clone()
+        if isinstance(self.layer, nn.Conv2d):
+            W = W.flatten(1)
+        if isinstance(self.layer, transformers.Conv1D):
+            W = W.t()
+        W = W.float()
+
+        if hasattr(self, 'quantizer'):
+            if not self.quantizer.ready():
+                self.quantizer.find_params(W, weight=True)
+
+        tick = time.time()
+
+        del self.H
+
+        # in_features = self.layer.in_features  # Get the number of input features of the old model
+        # out_features = self.layer.out_features  # Get the number of output features of the old model
+        
+        # model = nn.Linear(in_features, out_features)  # Create a new linear model with the same specifications
+        # model = model.to(self.dev)
+        # model.weight.data = self.layer.weight.data.clone()  # Copy the weights from the old model to the new model
+        # model.bias.data = self.layer.bias.data.clone()  # Copy the weights from the old model to the new model
+
+        model = copy.deepcopy(self.layer)
+        input = self.inp1.clone().squeeze(0) 
+        output = self.out1.clone().squeeze(0)   
+        from torch.utils.data import TensorDataset, DataLoader
+        dataset = TensorDataset(input, output)
+        train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+        with torch.enable_grad():
+            model.train()
+            keep_masks = SNIP(model, 0.05, train_loader, self.dev)  
+            apply_prune_mask(model, keep_masks)
+            optimiser, lr_scheduler = experiment(model)
+
+        trainer = create_supervised_trainer(model, optimiser, nn.MSELoss(), device)
+        # evaluator = create_supervised_evaluator(model, {'accuracy': Accuracy(), 'nll': Loss(nn.MSELoss())}, self.dev)
+        trainer.run(train_loader, EPOCHS)
+        self.layer.weight.data = model.weight.data.clone()
+        self.layer.bias.data = model.bias.data.clone()
+        del model
+        if DEBUG:
+            print('error for admm:')
+            print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
+
 
     def free(self):
         if DEBUG:
