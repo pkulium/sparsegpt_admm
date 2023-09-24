@@ -224,10 +224,11 @@ class SparseGPT:
         train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
         criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
         optimizer = optim.SGD(
-        [param for name, param in model.parameters() if not 'mask' in name],
-        lr=INIT_LR,
-        momentum=0.9,
-        weight_decay=WEIGHT_DECAY_RATE)
+            [param for name, param in model.named_parameters() if not 'mask' in name],
+            lr=INIT_LR,
+            momentum=0.9,
+            weight_decay=WEIGHT_DECAY_RATE
+        )
         num_epochs = 100
         with torch.enable_grad():
             model.train()
