@@ -215,7 +215,7 @@ class SparseGPT:
         input = self.inp1.clone().squeeze(0) 
         output = self.out1.clone().squeeze(0) 
 
-        input = dinputata.to(torch.float32)  # Convert data to Float
+        input = input.to(torch.float32)  # Convert data to Float
         output = output.to(torch.float32)  # Now output has shape [2048, 768]
         model = model.to(torch.float32)  # Convert model parameters to Float
 
