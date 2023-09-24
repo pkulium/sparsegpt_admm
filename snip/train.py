@@ -13,7 +13,7 @@ from ignite.engine import Events, create_supervised_trainer, create_supervised_e
 from ignite.metrics import Accuracy, Loss
 from ignite.contrib.handlers import ProgressBar
 
-from snip import SNIP
+# from snip import SNIP
 
 # torch.manual_seed(42)
 # torch.backends.cudnn.deterministic = True
