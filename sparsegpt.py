@@ -227,7 +227,6 @@ class SparseGPT:
         with torch.enable_grad():
             model.train()
             keep_masks = SNIP(model, 0.05, train_loader, self.dev)  
-            keep_masks.requires_grad = True
             apply_prune_mask(model, keep_masks)
             optimiser, lr_scheduler = experiment(model)
             trainer = create_supervised_trainer(model, optimiser, nn.MSELoss(), device)
