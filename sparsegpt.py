@@ -211,17 +211,14 @@ class SparseGPT:
 
         del self.H
 
-        # in_features = self.layer.in_features  # Get the number of input features of the old model
-        # out_features = self.layer.out_features  # Get the number of output features of the old model
-        
-        # model = nn.Linear(in_features, out_features)  # Create a new linear model with the same specifications
-        # model = model.to(self.dev)
-        # model.weight.data = self.layer.weight.data.clone()  # Copy the weights from the old model to the new model
-        # model.bias.data = self.layer.bias.data.clone()  # Copy the weights from the old model to the new model
-
         model = copy.deepcopy(self.layer)
         input = self.inp1.clone().squeeze(0) 
-        output = self.out1.clone().squeeze(0)   
+        output = self.out1.clone().squeeze(0) 
+
+        input = dinputata.to(torch.float32)  # Convert data to Float
+        output = output.to(torch.float32)  # Now output has shape [2048, 768]
+        model = model.to(torch.float32)  # Convert model parameters to Float
+
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
         train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
@@ -245,6 +242,7 @@ class SparseGPT:
                     writer.add_scalar("training/loss", engine.state.output,
                                         engine.state.iteration)
             trainer.run(train_loader, EPOCHS)
+
         model.weight.data = model.weight.data.to(torch.float16)
         model.bias.data = model.bias.data.to(torch.float16)
         self.layer.weight.data = model.weight.data.clone()
