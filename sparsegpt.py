@@ -234,17 +234,17 @@ class SparseGPT:
             model.train()
             keep_masks = SNIP(model, 0.05, train_loader, self.dev)  
             apply_prune_mask(model, keep_masks)
-            for epoch in range(num_epochs):
-                # print('Epoch: {}'.format(epoch + 1))
-                # for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
-                for batch_idx, (data, target) in enumerate(train_loader):
-                    data, target = data.to(device), target.to(device)
-                    optimizer.zero_grad()
-                    output = model(data)
-                    loss = criterion(output, target)  # Compute the loss
-                    loss.backward()
-                    optimizer.step()
-                print(f'loss:{loss}')
+            # for epoch in range(num_epochs):
+            #     # print('Epoch: {}'.format(epoch + 1))
+            #     # for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
+            #     for batch_idx, (data, target) in enumerate(train_loader):
+            #         data, target = data.to(device), target.to(device)
+            #         optimizer.zero_grad()
+            #         output = model(data)
+            #         loss = criterion(output, target)  # Compute the loss
+            #         loss.backward()
+            #         optimizer.step()
+            #     print(f'loss:{loss}')
 
 
         # with torch.enable_grad():
