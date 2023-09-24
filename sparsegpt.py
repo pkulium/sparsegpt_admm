@@ -227,10 +227,12 @@ class SparseGPT:
         with torch.enable_grad():
             model.train()
             keep_masks = SNIP(model, 0.05, train_loader, self.dev)  
+            keep_masks.requires_grad = True
             apply_prune_mask(model, keep_masks)
             optimiser, lr_scheduler = experiment(model)
             trainer = create_supervised_trainer(model, optimiser, nn.MSELoss(), device)
-            # evaluator = create_supervised_evaluator(model, {'accuracy': Accuracy(), 'nll': Loss(nn.MSELoss())}, self.dev)
+            # evaluator = create_supervised_evaluator(m
+            # odel, {'accuracy': Accuracy(), 'nll': Loss(nn.MSELoss())}, self.dev)
             trainer.run(train_loader, EPOCHS)
         self.layer.weight.data = model.weight.data.clone()
         self.layer.bias.data = model.bias.data.clone()
