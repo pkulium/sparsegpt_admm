@@ -20,8 +20,8 @@ from ignite.contrib.handlers import ProgressBar
 # torch.backends.cudnn.benchmark = False
 
 LOG_INTERVAL = 20
-INIT_LR = 0.001
-WEIGHT_DECAY_RATE = 0.0005
+INIT_LR = 0.01
+WEIGHT_DECAY_RATE = 0.005
 EPOCHS = 250
 REPEAT_WITH_DIFFERENT_SEED = 3
 
