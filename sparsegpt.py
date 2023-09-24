@@ -234,6 +234,8 @@ class SparseGPT:
             # evaluator = create_supervised_evaluator(m
             # odel, {'accuracy': Accuracy(), 'nll': Loss(nn.MSELoss())}, self.dev)
             trainer.run(train_loader, EPOCHS)
+        model.weight.data = model.weight.data.to(torch.float16)
+        model.bias.data = model.bias.data.to(torch.float16)
         self.layer.weight.data = model.weight.data.clone()
         self.layer.bias.data = model.bias.data.clone()
         del model
