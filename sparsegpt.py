@@ -222,9 +222,6 @@ class SparseGPT:
         model = copy.deepcopy(self.layer)
         input = self.inp1.clone().squeeze(0) 
         output = self.out1.clone().squeeze(0)   
-        input = input.to(torch.float32)  # Convert data to Float
-        output = output.to(torch.float32)  # Now output has shape [2048, 768]
-        model = model.to(torch.float32)  # Convert model parameters to Float
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
         train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
@@ -268,6 +265,10 @@ class SparseGPT:
         model = SparseLinear(in_features, out_features, True)
         model.weight.data = self.layer.weight.data.clone()
         model.bias.data = self.layer.bias.data.clone()
+        
+        input = input.to(torch.float32)  # Convert data to Float
+        output = output.to(torch.float32)  # Now output has shape [2048, 768]
+        model = model.to(torch.float32)  # Convert model parameters to Float
 
         input = self.inp1.clone().squeeze(0) 
         output = self.out1.clone().squeeze(0)   
