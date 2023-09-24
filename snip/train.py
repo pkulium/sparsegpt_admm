@@ -38,6 +38,7 @@ def apply_prune_mask(net, keep_masks):
 
     for layer, keep_mask in zip(prunable_layers, keep_masks):
         assert (layer.weight.shape == keep_mask.shape)
+        layer.requires_grad = True
         keep_mask.requires_grad = True
         def hook_factory(keep_mask):
             """
