@@ -47,7 +47,8 @@ def SNIP(net, keep_ratio, train_dataloader, device):
     # Compute gradients (but don't apply them)
     net.zero_grad()
     outputs = net.forward(inputs)
-    loss = nn.MSELoss(outputs, targets)
+    criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
+    loss = criterion(outputs, targets)  # Compute the loss
     loss.backward()
 
     grads_abs = []
