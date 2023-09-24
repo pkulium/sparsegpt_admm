@@ -227,12 +227,23 @@ class SparseGPT:
         train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
         with torch.enable_grad():
             model.train()
+            writer = SummaryWriter()
             keep_masks = SNIP(model, 0.05, train_loader, self.dev)  
             apply_prune_mask(model, keep_masks)
             optimiser, lr_scheduler = experiment(model)
             trainer = create_supervised_trainer(model, optimiser, nn.MSELoss(), device)
-            # evaluator = create_supervised_evaluator(m
-            # odel, {'accuracy': Accuracy(), 'nll': Loss(nn.MSELoss())}, self.dev)
+            pbar = ProgressBar()
+            pbar.attach(trainer)
+
+            @trainer.on(Events.ITERATION_COMPLETED)
+            def log_training_loss(engine):
+                lr_scheduler.step()
+                iter_in_epoch = (engine.state.iteration - 1) % len(train_loader) + 1
+                if engine.state.iteration % LOG_INTERVAL == 0:
+                    # pbar.log_message("Epoch[{}] Iteration[{}/{}] Loss: {:.2f}"
+                    #       "".format(engine.state.epoch, iter_in_epoch, len(train_loader), engine.state.output))
+                    writer.add_scalar("training/loss", engine.state.output,
+                                        engine.state.iteration)
             trainer.run(train_loader, EPOCHS)
         model.weight.data = model.weight.data.to(torch.float16)
         model.bias.data = model.bias.data.to(torch.float16)
