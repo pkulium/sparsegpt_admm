@@ -267,11 +267,6 @@ class SparseGPT:
         model = SparseLinear(in_features, out_features, True)
         model.weight.data = self.layer.weight.data.clone()
         model.bias.data = self.layer.bias.data.clone()
-        
-        input = input.to(torch.float32)  # Convert data to Float
-        output = output.to(torch.float32)  # Now output has shape [2048, 768]
-        model = model.to(torch.float32)  # Convert model parameters to Float
-
         input = self.inp1.clone().squeeze(0) 
         output = self.out1.clone().squeeze(0)   
         from torch.utils.data import TensorDataset, DataLoader
@@ -279,10 +274,21 @@ class SparseGPT:
         train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
         with torch.enable_grad():
             model.train()
+            writer = SummaryWriter()
             optimiser, lr_scheduler = experiment(model)
             trainer = create_supervised_trainer(model, optimiser, nn.MSELoss(), device)
-            # evaluator = create_supervised_evaluator(m
-            # odel, {'accuracy': Accuracy(), 'nll': Loss(nn.MSELoss())}, self.dev)
+            pbar = ProgressBar()
+            pbar.attach(trainer)
+
+            @trainer.on(Events.ITERATION_COMPLETED)
+            def log_training_loss(engine):
+                lr_scheduler.step()
+                iter_in_epoch = (engine.state.iteration - 1) % len(train_loader) + 1
+                if engine.state.iteration % LOG_INTERVAL == 0:
+                    # pbar.log_message("Epoch[{}] Iteration[{}/{}] Loss: {:.2f}"
+                    #       "".format(engine.state.epoch, iter_in_epoch, len(train_loader), engine.state.output))
+                    writer.add_scalar("training/loss", engine.state.output,
+                                        engine.state.iteration)
             trainer.run(train_loader, EPOCHS)
         self.layer.weight.data = model.weight.data.clone()
         self.layer.bias.data = model.bias.data.clone()
