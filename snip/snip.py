@@ -26,7 +26,7 @@ def SNIP(net, keep_ratio, train_dataloader, device):
 
     # Let's create a fresh copy of the network so that we're not worried about
     # affecting the actual training-phase
-    # net = copy.deepcopy(net)
+    net = copy.deepcopy(net)
 
     # Monkey-patch the Linear and Conv2d layer to learn the multiplicative mask
     # instead of the weights
