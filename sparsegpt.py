@@ -222,27 +222,49 @@ class SparseGPT:
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
         train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+        criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
+        optimizer = optim.SGD(
+        model.parameters(),
+        lr=INIT_LR,
+        momentum=0.9,
+        weight_decay=WEIGHT_DECAY_RATE)
+        num_epochs = 100
         with torch.enable_grad():
             model.train()
-            writer = SummaryWriter()
-            keep_masks = SNIP(model, 0.05, train_loader, self.dev)  
-            apply_prune_mask(model, keep_masks)
-            optimiser, lr_scheduler = experiment(model)
-            trainer = create_supervised_trainer(model, optimiser, nn.MSELoss(), device)
-            pbar = ProgressBar()
-            pbar.attach(trainer)
+            for epoch in range(num_epochs):
+                # print('Epoch: {}'.format(epoch + 1))
+                # for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
+                for batch_idx, (data, target) in enumerate(train_loader):
+                    data, target = data.to(device), target.to(device)
+                    # data.requires_grad = True
+                    # target.requires_grad = True
+                    optimizer.zero_grad()
+                    output = model(data)
+                    loss = criterion(output, target)  # Compute the loss
+                    loss.backward()
+                    optimizer.step()
 
-            @trainer.on(Events.ITERATION_COMPLETED)
-            def log_training_loss(engine):
-                lr_scheduler.step()
-                iter_in_epoch = (engine.state.iteration - 1) % len(train_loader) + 1
-                if engine.state.iteration % LOG_INTERVAL == 0:
-                    # pbar.log_message("Epoch[{}] Iteration[{}/{}] Loss: {:.2f}"
-                    #       "".format(engine.state.epoch, iter_in_epoch, len(train_loader), engine.state.output))
-                    writer.add_scalar("training/loss", engine.state.output,
-                                        engine.state.iteration)
-            trainer.run(train_loader, EPOCHS)
 
+        # with torch.enable_grad():
+        #     model.train()
+        #     writer = SummaryWriter()
+        #     keep_masks = SNIP(model, 0.05, train_loader, self.dev)  
+        #     apply_prune_mask(model, keep_masks)
+        #     optimiser, lr_scheduler = experiment(model)
+        #     trainer = create_supervised_trainer(model, optimiser, nn.MSELoss(), device)
+        #     pbar = ProgressBar()
+        #     pbar.attach(trainer)
+
+        #     @trainer.on(Events.ITERATION_COMPLETED)
+        #     def log_training_loss(engine):
+        #         lr_scheduler.step()
+        #         iter_in_epoch = (engine.state.iteration - 1) % len(train_loader) + 1
+        #         if engine.state.iteration % LOG_INTERVAL == 0:
+        #             # pbar.log_message("Epoch[{}] Iteration[{}/{}] Loss: {:.2f}"
+        #             #       "".format(engine.state.epoch, iter_in_epoch, len(train_loader), engine.state.output))
+        #             writer.add_scalar("training/loss", engine.state.output,
+        #                                 engine.state.iteration)
+        #     trainer.run(train_loader, EPOCHS)
         model.weight.data = model.weight.data.to(torch.float16)
         model.bias.data = model.bias.data.to(torch.float16)
         self.layer.weight.data = model.weight.data.clone()
