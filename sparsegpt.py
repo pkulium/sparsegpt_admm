@@ -229,10 +229,9 @@ class SparseGPT:
             keep_masks = SNIP(model, 0.05, train_loader, self.dev)  
             apply_prune_mask(model, keep_masks)
             optimiser, lr_scheduler = experiment(model)
-
-        trainer = create_supervised_trainer(model, optimiser, nn.MSELoss(), device)
-        # evaluator = create_supervised_evaluator(model, {'accuracy': Accuracy(), 'nll': Loss(nn.MSELoss())}, self.dev)
-        trainer.run(train_loader, EPOCHS)
+            trainer = create_supervised_trainer(model, optimiser, nn.MSELoss(), device)
+            # evaluator = create_supervised_evaluator(model, {'accuracy': Accuracy(), 'nll': Loss(nn.MSELoss())}, self.dev)
+            trainer.run(train_loader, EPOCHS)
         self.layer.weight.data = model.weight.data.clone()
         self.layer.bias.data = model.bias.data.clone()
         del model

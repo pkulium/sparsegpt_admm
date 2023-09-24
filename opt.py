@@ -111,9 +111,12 @@ def opt_sequential(model, dataloader, dev):
             print(i, name)
             print('Pruning ...')
             sparsity = args.sparsity
-            gpts[name].admmprune(
+            gpts[name].snipprune(
                 sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
             )
+            # gpts[name].admmprune(
+            #     sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
+            # )
             # gpts[name].fasterprune(
             #     sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
             # )
