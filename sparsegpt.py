@@ -310,6 +310,25 @@ class SparseGPT:
 
         mask = None
 
+        # apply mask from snip
+        model = copy.deepcopy(self.layer)
+        input = self.inp1.clone().squeeze(0) 
+        output = self.out1.clone().squeeze(0) 
+
+        input = input.to(torch.float32)  # Convert data to Float
+        output = output.to(torch.float32)  # Now output has shape [2048, 768]
+        model = model.to(torch.float32)  # Convert model parameters to Float
+
+        from torch.utils.data import TensorDataset, DataLoader
+        dataset = TensorDataset(input, output)
+        train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+        with torch.enable_grad():
+            model.train()
+            mask = SNIP(model, 0.05, train_loader, self.dev)
+        del model
+        del dataset
+        del train_loader
+        
         for i1 in range(0, self.columns, blocksize):
             i2 = min(i1 + blocksize, self.columns)
             count = i2 - i1
