@@ -324,7 +324,7 @@ class SparseGPT:
         train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
         with torch.enable_grad():
             model.train()
-            mask = SNIP(model, 0.05, train_loader, self.dev)
+            mask = SNIP(model, 0.05, train_loader, self.dev)[0]
         del model
         del dataset
         del train_loader
