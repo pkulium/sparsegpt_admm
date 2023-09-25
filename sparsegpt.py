@@ -275,9 +275,8 @@ class SparseGPT:
         if DEBUG:
             print('error for admm:')
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
-
     
-    def nmprune(
+    def faster_snip_prune(
         self, sparsity, prunen=0, prunem=0, blocksize=128, percdamp=.01
     ):
         W = self.layer.weight.data.clone()
@@ -293,41 +292,86 @@ class SparseGPT:
 
         tick = time.time()
 
+        H = self.H
         del self.H
+        dead = torch.diag(H) == 0
+        H[dead, dead] = 1
+        W[:, dead] = 0
 
-        in_features = self.layer.in_features  # Get the number of input features of the old model
-        out_features = self.layer.out_features  # Get the number of output features of the old model 
-        model = SparseLinear(in_features, out_features, True)
-        model.weight.data = self.layer.weight.data.clone()
-        model.bias.data = self.layer.bias.data.clone()
-        input = self.inp1.clone().squeeze(0) 
-        output = self.out1.clone().squeeze(0)   
-        from torch.utils.data import TensorDataset, DataLoader
-        dataset = TensorDataset(input, output)
-        train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
-        with torch.enable_grad():
-            model.train()
-            writer = SummaryWriter()
-            optimiser, lr_scheduler = experiment(model)
-            trainer = create_supervised_trainer(model, optimiser, nn.MSELoss(), device)
-            pbar = ProgressBar()
-            pbar.attach(trainer)
+        Losses = torch.zeros(self.rows, device=self.dev)
 
-            @trainer.on(Events.ITERATION_COMPLETED)
-            def log_training_loss(engine):
-                lr_scheduler.step()
-                iter_in_epoch = (engine.state.iteration - 1) % len(train_loader) + 1
-                if engine.state.iteration % LOG_INTERVAL == 0:
-                    # pbar.log_message("Epoch[{}] Iteration[{}/{}] Loss: {:.2f}"
-                    #       "".format(engine.state.epoch, iter_in_epoch, len(train_loader), engine.state.output))
-                    writer.add_scalar("training/loss", engine.state.output,
-                                        engine.state.iteration)
-            trainer.run(train_loader, EPOCHS)
-        self.layer.weight.data = model.weight.data.clone()
-        self.layer.bias.data = model.bias.data.clone()
-        del model
+        damp = percdamp * torch.mean(torch.diag(H))
+        diag = torch.arange(self.columns, device=self.dev)
+        H[diag, diag] += damp
+        H = torch.linalg.cholesky(H)
+        H = torch.cholesky_inverse(H)
+        H = torch.linalg.cholesky(H, upper=True)
+        Hinv = H
+
+        mask = None
+
+        for i1 in range(0, self.columns, blocksize):
+            i2 = min(i1 + blocksize, self.columns)
+            count = i2 - i1
+
+            W1 = W[:, i1:i2].clone()
+            Q1 = torch.zeros_like(W1)
+            Err1 = torch.zeros_like(W1)
+            Losses1 = torch.zeros_like(W1)
+            Hinv1 = Hinv[i1:i2, i1:i2]
+
+            if prunen == 0: 
+                if mask is not None:
+                    mask1 = mask[:, i1:i2]
+                else:
+                    tmp = W1 ** 2 / (torch.diag(Hinv1).reshape((1, -1))) ** 2
+                    thresh = torch.sort(tmp.flatten())[0][int(tmp.numel() * sparsity)]
+                    mask1 = tmp <= thresh
+            else:
+                mask1 = torch.zeros_like(W1) == 1
+
+            for i in range(count):
+                w = W1[:, i]
+                d = Hinv1[i, i]
+
+                if prunen != 0 and i % prunem == 0:
+                    tmp = W1[:, i:(i + prunem)] ** 2 / (torch.diag(Hinv1)[i:(i + prunem)].reshape((1, -1))) ** 2
+                    mask1.scatter_(1, i + torch.topk(tmp, prunen, dim=1, largest=False)[1], True)
+
+                q = w.clone()
+                q[mask1[:, i]] = 0
+
+                if hasattr(self, 'quantizer'):
+                    q = quantize(
+                        q.unsqueeze(1), self.quantizer.scale, self.quantizer.zero, self.quantizer.maxq
+                    ).flatten()
+
+                Q1[:, i] = q
+                Losses1[:, i] = (w - q) ** 2 / d ** 2
+
+                err1 = (w - q) / d
+                W1[:, i:] -= err1.unsqueeze(1).matmul(Hinv1[i, i:].unsqueeze(0))
+                Err1[:, i] = err1
+
+            W[:, i1:i2] = Q1
+            Losses += torch.sum(Losses1, 1) / 2
+
+            W[:, i2:] -= Err1.matmul(Hinv[i1:i2, i2:])
+
+            if DEBUG:
+                self.layer.weight.data[:, :i2] = W[:, :i2]
+                self.layer.weight.data[:, i2:] = W[:, i2:]
+                print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
+                print(torch.sum(Losses))
+
+        torch.cuda.synchronize()
+        print('time %.2f' % (time.time() - tick))
+        print('error', torch.sum(Losses).item())
+
+        if isinstance(self.layer, transformers.Conv1D):
+            W = W.t()
+        self.layer.weight.data = W.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
         if DEBUG:
-            print('error for admm:')
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
 
     def free(self):
