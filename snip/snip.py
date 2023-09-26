@@ -119,3 +119,4 @@ def PGD(net, keep_ratio, train_dataloader, device):
 
     keep_masks = net.weigth_mask > acceptable_score
     return (keep_masks)
+

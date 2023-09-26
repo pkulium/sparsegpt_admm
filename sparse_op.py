@@ -110,5 +110,52 @@ class SparseLinear(nn.Linear):
 
     
 
-    
+import numpy as np
+import torch
+import torch.autograd as autograd
+import torch.nn as nn
+import torch.nn.functional as F
+import math
 
+class VRPGELinear(nn.Linear):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.scores = nn.Parameter(torch.Tensor(self.weight.size()[0], 1))
+        self.register_buffer('subnet', torch.zeros_like(self.scores))
+        self.train_weights = False
+        nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
+        self.prune = False
+        self.subnet = torch.ones_like(self.scores)
+        self.register_buffer("stored_mask_0", torch.zeros_like(self.scores))
+        self.register_buffer("stored_mask_1", torch.zeros_like(self.scores))
+
+    @property
+    def clamped_scores(self):
+        return self.scores
+
+    def fix_subnet(self):
+        self.subnet = (torch.rand_like(self.scores) < self.clamped_scores).float()
+
+    def forward(self, x):
+        if self.prune:
+            if not self.train_weights:
+                self.subnet = StraightThroughBinomialSampleNoGrad.apply(self.scores)
+                self.stored_mask_0.data = (self.subnet-self.scores)/torch.sqrt((self.scores+1e-20)*(1-self.scores+1e-20))
+                w = self.weight * self.subnet.view(-1, 1)
+                x = F.linear(x, w, self.bias)
+            else:
+                w = self.weight * self.subnet.view(-1, 1)
+                x = F.linear(x, w, self.bias)
+        else:
+            x = F.linear(x, self.weight, self.bias)
+        return x
+
+class StraightThroughBinomialSampleNoGrad(autograd.Function):
+    @staticmethod
+    def forward(ctx, scores):
+        output = (torch.rand_like(scores) < scores).float()
+        return output
+
+    @staticmethod
+    def backward(ctx, grad_outputs):
+        return torch.zeros_like(grad_outputs)

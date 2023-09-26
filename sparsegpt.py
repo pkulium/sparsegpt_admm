@@ -193,88 +193,6 @@ class SparseGPT:
             print('error for admm:')
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
     
-    def snipprune(
-        self, sparsity, prunen=0, prunem=0, blocksize=128, percdamp=.01
-    ):
-        W = self.layer.weight.data.clone()
-        if isinstance(self.layer, nn.Conv2d):
-            W = W.flatten(1)
-        if isinstance(self.layer, transformers.Conv1D):
-            W = W.t()
-        W = W.float()
-
-        if hasattr(self, 'quantizer'):
-            if not self.quantizer.ready():
-                self.quantizer.find_params(W, weight=True)
-
-        tick = time.time()
-
-        del self.H
-
-        model = copy.deepcopy(self.layer)
-        input = self.inp1.clone().squeeze(0) 
-        output = self.out1.clone().squeeze(0) 
-
-        input = input.to(torch.float32)  # Convert data to Float
-        output = output.to(torch.float32)  # Now output has shape [2048, 768]
-        model = model.to(torch.float32)  # Convert model parameters to Float
-
-        from torch.utils.data import TensorDataset, DataLoader
-        dataset = TensorDataset(input, output)
-        train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
-        criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
-        optimizer = optim.SGD(
-            [param for name, param in model.named_parameters() if not 'mask' in name],
-            lr=INIT_LR,
-            # momentum=0.9,
-            # weight_decay=WEIGHT_DECAY_RATE
-        )
-        num_epochs = 100
-        with torch.enable_grad():
-            model.train()
-            keep_masks = SNIP(model, 0.05, train_loader, self.dev)  
-            apply_prune_mask(model, keep_masks)
-            # for epoch in range(num_epochs):
-            #     # print('Epoch: {}'.format(epoch + 1))
-            #     # for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
-            #     for batch_idx, (data, target) in enumerate(train_loader):
-            #         data, target = data.to(device), target.to(device)
-            #         optimizer.zero_grad()
-            #         output = model(data)
-            #         loss = criterion(output, target)  # Compute the loss
-            #         loss.backward()
-            #         optimizer.step()
-            #     print(f'loss:{loss}')
-
-
-        # with torch.enable_grad():
-        #     model.train()
-        #     writer = SummaryWriter()
-        #     keep_masks = SNIP(model, 0.05, train_loader, self.dev)  
-        #     apply_prune_mask(model, keep_masks)
-        #     optimiser, lr_scheduler = experiment(model)
-        #     trainer = create_supervised_trainer(model, optimiser, nn.MSELoss(), device)
-        #     pbar = ProgressBar()
-        #     pbar.attach(trainer)
-
-        #     @trainer.on(Events.ITERATION_COMPLETED)
-        #     def log_training_loss(engine):
-        #         lr_scheduler.step()
-        #         iter_in_epoch = (engine.state.iteration - 1) % len(train_loader) + 1
-        #         if engine.state.iteration % LOG_INTERVAL == 0:
-        #             # pbar.log_message("Epoch[{}] Iteration[{}/{}] Loss: {:.2f}"
-        #             #       "".format(engine.state.epoch, iter_in_epoch, len(train_loader), engine.state.output))
-        #             writer.add_scalar("training/loss", engine.state.output,
-        #                                 engine.state.iteration)
-        #     trainer.run(train_loader, EPOCHS)
-        model.weight.data = model.weight.data.to(torch.float16)
-        model.bias.data = model.bias.data.to(torch.float16)
-        self.layer.weight.data = model.weight.data.clone()
-        self.layer.bias.data = model.bias.data.clone()
-        del model
-        if DEBUG:
-            print('error for admm:')
-            print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
     
     def faster_snip_prune(
         self, sparsity, prunen=0, prunem=0, blocksize=128, percdamp=.01
@@ -394,7 +312,7 @@ class SparseGPT:
         if DEBUG:
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
 
-    def faster_admm_prune(
+    def faster_pgd_prune(
         self, sparsity, prunen=0, prunem=0, blocksize=128, percdamp=.01
     ):
         W = self.layer.weight.data.clone()
@@ -446,6 +364,8 @@ class SparseGPT:
         del model
         del dataset
         del train_loader
+        self.layer.weight.data[mask] = 0
+        return
         
         for i1 in range(0, self.columns, blocksize):
             i2 = min(i1 + blocksize, self.columns)
@@ -510,6 +430,8 @@ class SparseGPT:
         self.layer.weight.data = W.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
         if DEBUG:
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
+
+    
 
     def free(self):
         if DEBUG:
