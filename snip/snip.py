@@ -73,7 +73,7 @@ def SNIP(net, keep_ratio, train_dataloader, device):
     for g in grads_abs:
         keep_masks.append(((g / norm_factor) >= acceptable_score).float())
 
-    print(torch.sum(torch.cat([torch.flatten(x == 1) for x in keep_masks])))
+    # print(torch.sum(torch.cat([torch.flatten(x == 1) for x in keep_masks])))
 
     return(keep_masks)
 
