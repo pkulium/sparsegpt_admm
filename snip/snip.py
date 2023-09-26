@@ -5,7 +5,11 @@ import torch.nn.functional as F
 import copy
 import types
 
-
+def clip_mask(model, lower=0.0, upper=1.0):
+    params = [param for name, param in model.named_parameters() if 'neuron_mask' in name]
+    with torch.no_grad():
+        for param in params:
+            param.clamp_(lower, upper)
 
 def snip_forward_conv2d(self, x):
         return F.conv2d(x, self.weight * self.weight_mask, self.bias,
@@ -72,3 +76,46 @@ def SNIP(net, keep_ratio, train_dataloader, device):
     print(torch.sum(torch.cat([torch.flatten(x == 1) for x in keep_masks])))
 
     return(keep_masks)
+
+
+def PGD(net, keep_ratio, train_dataloader, device):
+
+    # Let's create a fresh copy of the network so that we're not worried about
+    # affecting the actual training-phase
+    # net = copy.deepcopy(net)
+
+    # Monkey-patch the Linear and Conv2d layer to learn the multiplicative mask
+    # instead of the weights
+    for layer in net.modules():
+        if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+            layer.weight_mask = nn.Parameter(torch.ones_like(layer.weight))
+            # nn.init.xavier_normal_(layer.weight_mask)
+            layer.weight.requires_grad = False
+            
+
+        # Override the forward methods:
+        if isinstance(layer, nn.Conv2d):
+            layer.forward = types.MethodType(snip_forward_conv2d, layer)
+
+        if isinstance(layer, nn.Linear):
+            layer.forward = types.MethodType(snip_forward_linear, layer)
+
+    criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
+    mask_optimizer = torch.optim.SGD(net.weight_mask, lr=0.001, momentum=0.9)
+    for i, (inputs, targets) in enumerate(train_dataloader):
+        inputs, targets = inputs.to(device), targets.to(device)
+
+        # step 2: calculate loss and update the mask values
+        mask_optimizer.zero_grad()
+        outputs = net.forward(inputs)
+        loss = criterion(outputs, targets)  # Compute the loss
+        loss.backward()
+        mask_optimizer.step()
+        clip_mask(net)
+    
+    num_params_to_keep = int(len(net.weight_mask) * keep_ratio)
+    threshold, _ = torch.topk(net.weight_mask, num_params_to_keep, sorted=True)
+    acceptable_score = threshold[-1]
+
+    keep_masks = net.weigth_mask > acceptable_score
+    return (keep_masks)
