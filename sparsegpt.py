@@ -249,6 +249,7 @@ class SparseGPT:
         mask = mask.to(torch.int)
         self.layer.weight.data[mask] = 0
         return
+    
         
         for i1 in range(0, self.columns, blocksize):
             i2 = min(i1 + blocksize, self.columns)
