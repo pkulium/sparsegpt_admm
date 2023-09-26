@@ -328,6 +328,7 @@ class SparseGPT:
         del model
         del dataset
         del train_loader
+        mask = mask.to(torch.int)
         
         for i1 in range(0, self.columns, blocksize):
             i2 = min(i1 + blocksize, self.columns)
