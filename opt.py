@@ -335,6 +335,13 @@ if __name__ == '__main__':
                 break
         print(time.time() - tick)
 
+    ################################################################
+    print("*"*30)
+    sparsity_ratio = check_sparsity(model)
+    print(f"sparsity sanity check {sparsity_ratio:.4f}")
+    print("*"*30)
+    ################################################################
+
     # for dataset in ['wikitext2', 'ptb', 'c4']:
     for dataset in ['wikitext2']:
         dataloader, testloader = get_loaders(
