@@ -19,7 +19,7 @@ def check_sparsity(model):
     use_cache = model.config.use_cache 
     model.config.use_cache = False 
 
-    layers = model.model.layers
+    layers = model.model.decoder.layers
     count = 0 
     total_params = 0
     for i in range(len(layers)):
