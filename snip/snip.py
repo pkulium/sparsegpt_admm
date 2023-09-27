@@ -153,3 +153,4 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
             optimizer.step()
             
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
+    return model.subnet
