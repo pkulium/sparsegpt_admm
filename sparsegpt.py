@@ -364,10 +364,10 @@ class SparseGPT:
         with torch.enable_grad():
             model.train()
             mask = PGD(model, 0.05, train_loader, self.dev)[0]
+        self.layer.weight.data[mask] = 0
         del model
         del dataset
         del train_loader
-        self.layer.weight.data[mask] = 0
         return
         
         for i1 in range(0, self.columns, blocksize):
