@@ -117,6 +117,6 @@ def PGD(net, keep_ratio, train_dataloader, device):
     threshold, _ = torch.topk(net.weight_mask, num_params_to_keep, sorted=True)
     acceptable_score = threshold[-1]
 
-    keep_masks = net.weigth_mask > acceptable_score
+    keep_masks = net.weight_mask > acceptable_score
     return (keep_masks)
 
