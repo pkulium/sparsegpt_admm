@@ -364,7 +364,7 @@ class SparseGPT:
         with torch.enable_grad():
             model.train()
             mask = PGD(model, 0.5, train_loader, self.dev)
-            print(f'shape1 {torch.sum(mask)} {model.weight_mask.shape}')
+            print(f'shape1 {torch.sum(mask) / (model.weight_mask.shape[0] * model.weight_mask.shape[1])}')
         self.layer.weight.data[~mask] = 0
         del model
         del dataset
