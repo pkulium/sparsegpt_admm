@@ -473,7 +473,7 @@ class SparseGPT:
         out_features, in_features = self.layer.weight.shape
         model = VRPGELinear(in_features=in_features, out_features=out_features).to(self.dev)
         model.weight.data = self.layer.weight.data.clone()
-        model.weight.bias = self.layer.weight.bias.clone()
+        model.bias.data = self.layer.bias.data.clone()
         input = self.inp1.clone().squeeze(0) 
         output = self.out1.clone().squeeze(0) 
 
