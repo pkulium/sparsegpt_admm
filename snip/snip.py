@@ -118,11 +118,12 @@ def PGD(net, keep_ratio, train_dataloader, device):
             mask_optimizer.step()
             clip_mask(net)
     
-    num_params_to_keep = int(net.weight_mask.shape[0] * net.weight_mask.shape[1] * keep_ratio)
-    threshold, _ = torch.topk(torch.flatten(net.weight_mask), num_params_to_keep, sorted=True)
-    acceptable_score = threshold[-1]
-    print(f'shape {net.weight_mask.shape}:{acceptable_score}')
-    keep_masks = net.weight_mask > acceptable_score
-    print(f'shape {keep_masks.shape}')
-    return keep_masks
+    # num_params_to_keep = int(net.weight_mask.shape[0] * net.weight_mask.shape[1] * keep_ratio)
+    # threshold, _ = torch.topk(torch.flatten(net.weight_mask), num_params_to_keep, sorted=True)
+    # acceptable_score = threshold[-1]
+    # keep_masks = net.weight_mask > acceptable_score
+    # return keep_masks
 
+    thresh = torch.sort(net.weight_mask.flatten().cuda())[0][int(layer.weight.numel()*keep_ratio)].cpu()
+    W_mask = W_metric>=thresh
+    return W_mask
