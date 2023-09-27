@@ -119,5 +119,5 @@ def PGD(net, keep_ratio, train_dataloader, device):
     print(f'shape {net.weight_mask.shape}:{acceptable_score}')
     keep_masks = net.weight_mask > acceptable_score
     print(f'shape {keep_masks.shape}')
-    return (keep_masks)
+    return keep_masks
 
