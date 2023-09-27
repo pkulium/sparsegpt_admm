@@ -88,12 +88,8 @@ def PGD(net, keep_ratio, train_dataloader, device):
     # instead of the weights
     for layer in net.modules():
         if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-            # W_metric = torch.abs(layer.weight.data)
-            # thresh = torch.sort(W_metric.flatten().cuda())[0][int(layer.weight.numel()*keep_ratio)].cpu()
-            # W_mask = (W_metric>=thresh)
-            # layer.weight_mask = nn.Parameter(W_mask.to(layer.weight.data.dtype))
             layer.weight_mask = nn.Parameter(torch.zeros_like(layer.weight))
-            # nn.init.xavier_normal_(layer.weight_mask)
+            nn.init.xavier_normal_(layer.weight_mask)
             layer.weight.requires_grad = False
             
 

@@ -159,3 +159,34 @@ class StraightThroughBinomialSampleNoGrad(autograd.Function):
     @staticmethod
     def backward(ctx, grad_outputs):
         return torch.zeros_like(grad_outputs)
+
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import math
+
+class ProbMaskLinear(nn.Linear):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.scores = nn.Parameter(torch.Tensor(self.weight.size()))  # Probability
+        self.subnet = None  # Mask
+        self.train_weights = False
+        nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
+
+    @property
+    def clamped_scores(self):
+        return self.scores
+
+    def fix_subnet(self):
+        self.subnet = (torch.rand_like(self.scores) < self.clamped_scores).float()
+
+    def forward(self, x):
+        if not self.train_weights:  # training
+            self.subnet = (torch.rand_like(self.scores) < self.clamped_scores).float()
+            w = self.weight * self.subnet
+            x = F.linear(x, w, self.bias)
+        else:  # testing
+            w = self.weight * self.subnet
+            x = F.linear(x, w, self.bias)
+        return x
