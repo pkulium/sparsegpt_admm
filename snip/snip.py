@@ -106,7 +106,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
 
     criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
     mask_optimizer = torch.optim.SGD([net.weight_mask], lr=0.001, momentum=0.9)
-    for epoch in range(10):
+    for epoch in range(50):
         for i, (inputs, targets) in enumerate(train_dataloader):
             inputs, targets = inputs.to(device), targets.to(device)
 
@@ -118,13 +118,9 @@ def PGD(net, keep_ratio, train_dataloader, device):
             mask_optimizer.step()
             clip_mask(net)
     
-    # num_params_to_keep = int(net.weight_mask.shape[0] * net.weight_mask.shape[1] * keep_ratio)
-    # threshold, _ = torch.topk(torch.flatten(net.weight_mask), num_params_to_keep, sorted=True)
-    # acceptable_score = threshold[-1]
-    # keep_masks = net.weight_mask > acceptable_score
-    # return keep_masks
+    num_params_to_keep = int(net.weight_mask.shape[0] * net.weight_mask.shape[1] * keep_ratio)
+    threshold, _ = torch.topk(torch.flatten(net.weight_mask), num_params_to_keep, sorted=True)
+    acceptable_score = threshold[-1]
+    keep_masks = net.weight_mask > acceptable_score
+    return keep_masks
 
-    thresh = torch.sort(net.weight_mask.flatten().cuda())[0][int(layer.weight.numel()*keep_ratio)].cpu()
-    W_mask = W_metric>=thresh
-    print(f'shape {int(layer.weight.numel())}: {torch.sum(W_mask)}')
-    return W_mask
