@@ -101,7 +101,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
             layer.forward = types.MethodType(snip_forward_linear, layer)
 
     criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
-    mask_optimizer = torch.optim.SGD(net.weight_mask, lr=0.001, momentum=0.9)
+    mask_optimizer = torch.optim.SGD([net.weight_mask], lr=0.001, momentum=0.9)
     for i, (inputs, targets) in enumerate(train_dataloader):
         inputs, targets = inputs.to(device), targets.to(device)
 
