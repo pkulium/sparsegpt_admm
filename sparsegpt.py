@@ -369,6 +369,8 @@ class SparseGPT:
         del model
         del dataset
         del train_loader
+        if DEBUG:
+            print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
         return
         
         for i1 in range(0, self.columns, blocksize):
