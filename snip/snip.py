@@ -124,3 +124,32 @@ def PGD(net, keep_ratio, train_dataloader, device):
     keep_masks = net.weight_mask > acceptable_score
     return keep_masks
 
+import torch.optim as optim
+def VRPEG(model, keep_ratio, train_dataloader, device):
+   # Define the optimizer, you can use any optimizer of your choice
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    # Define the loss function
+    criterion = nn.MSELoss()
+
+    # Number of epochs
+    num_epochs = 10
+
+    # Training Loop
+    for epoch in range(num_epochs):
+        for inputs, targets in train_dataloader:
+            inputs, targets = inputs.to(device), targets.to(device)
+            # Zero the parameter gradients
+            optimizer.zero_grad()
+            
+            # Forward pass
+            outputs = model(inputs)
+            
+            # Calculate loss
+            loss = criterion(outputs, targets)
+            
+            # Backward pass and optimization
+            loss.backward()
+            optimizer.step()
+            
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
