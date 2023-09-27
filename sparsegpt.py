@@ -485,7 +485,7 @@ class SparseGPT:
         with torch.enable_grad():
             model.train()
             mask = VRPEG(model, 0.5, train_loader, self.dev)
-            print(f'shape1 {torch.sum(mask) / (model.weight_mask.shape[0] * model.weight_mask.shape[1])}')
+            print(f'shape1 {torch.sum(mask) / int(model.weight.numel())}')
         self.layer.weight.data[~mask] = 0
         del model
         del dataset
