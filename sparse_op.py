@@ -124,7 +124,7 @@ class VRPGELinear(nn.Linear):
         self.register_buffer('subnet', torch.zeros_like(self.scores))
         self.train_weights = False
         nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
-        self.prune = False
+        self.prune = True
         self.subnet = torch.ones_like(self.scores)
         self.register_buffer("stored_mask_0", torch.zeros_like(self.scores))
         self.register_buffer("stored_mask_1", torch.zeros_like(self.scores))
