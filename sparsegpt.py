@@ -247,8 +247,8 @@ class SparseGPT:
         del dataset
         del train_loader
         mask = mask.to(torch.bool)
-        self.layer.weight.data[mask] = 0
-        return
+        # self.layer.weight.data[mask] = 0
+        # return
     
         
         for i1 in range(0, self.columns, blocksize):
