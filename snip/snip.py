@@ -88,7 +88,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
     # instead of the weights
     for layer in net.modules():
         if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-            layer.weight_mask = nn.Parameter(torch.ones_like(layer.weight))
+            layer.weight_mask = nn.Parameter(torch.zeros_like(layer.weight))
             # nn.init.xavier_normal_(layer.weight_mask)
             layer.weight.requires_grad = False
             
