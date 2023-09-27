@@ -471,7 +471,7 @@ class SparseGPT:
 
         # apply mask from pgd
         out_features, in_features = self.layer.weight.shape
-        model = VRPGELinear(in_features=in_features, out_features=out_features)
+        model = VRPGELinear(in_features=in_features, out_features=out_features).to(self.dev)
         input = self.inp1.clone().squeeze(0) 
         output = self.out1.clone().squeeze(0) 
 
