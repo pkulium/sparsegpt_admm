@@ -100,7 +100,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
             mask_init = mask_init[torch.randperm(mask_size)].view_as(layer.weight_mask)
 
             # Initialize the mask
-            layer.weight_mask.data = nn.Parameter(mask_init)
+            layer.weight_mask.data = mask_init
 
             layer.weight.requires_grad = False
             
