@@ -246,7 +246,7 @@ class SparseGPT:
         del model
         del dataset
         del train_loader
-        mask = mask.to(torch.int)
+        mask = mask.to(torch.bool)
         self.layer.weight.data[mask] = 0
         return
     
