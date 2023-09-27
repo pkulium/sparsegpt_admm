@@ -126,4 +126,5 @@ def PGD(net, keep_ratio, train_dataloader, device):
 
     thresh = torch.sort(net.weight_mask.flatten().cuda())[0][int(layer.weight.numel()*keep_ratio)].cpu()
     W_mask = W_metric>=thresh
+    print(f'shape {int(layer.weight.numel())}: {torch.sum(W_mask)}')
     return W_mask
