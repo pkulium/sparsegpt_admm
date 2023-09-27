@@ -117,6 +117,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
     criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
     # mask_optimizer = torch.optim.SGD([net.weight_mask], lr=0.001, momentum=0.9)
     mask_optimizer = torch.optim.Adam([net.weight_mask], lr=0.01)
+    lambda_l1 = 0.01  # You can adjust this value to change the strength of the regularization
     for epoch in range(500):
         for i, (inputs, targets) in enumerate(train_dataloader):
             inputs, targets = inputs.to(device), targets.to(device)
@@ -125,9 +126,12 @@ def PGD(net, keep_ratio, train_dataloader, device):
             mask_optimizer.zero_grad()
             outputs = net.forward(inputs)
             loss = criterion(outputs, targets)  # Compute the loss
+            l1_reg = torch.sum(torch.abs(net.weight_mask))
+            loss += lambda_l1 * l1_reg
             loss.backward()
             mask_optimizer.step()
             clip_mask(net)
+        print(f"Epoch {epoch}, Loss: {loss.item()}")
     
     num_params_to_keep = int(net.weight_mask.shape[0] * net.weight_mask.shape[1] * keep_ratio)
     threshold, _ = torch.topk(torch.flatten(net.weight_mask), num_params_to_keep, sorted=True)
