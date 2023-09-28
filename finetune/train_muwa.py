@@ -60,7 +60,6 @@ model = get_peft_model(model, config)
 print_trainable_parameters(model)
 
 
-
 trainer = transformers.Trainer(
     model=model, 
     train_dataset=data['train'],
