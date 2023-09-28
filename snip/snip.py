@@ -219,7 +219,7 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
                 loss = criterion(output, target) + lmbda * entries_sum
                 loss.backward()
                 for optimizer in optimizers: optimizer.step()
-        if outer_round != rounds-1: model.prune()
+        if outer_round != rounds-1: model.prune(model.temp)
 
     print('--------- Training final ticket -----------')
     optimizers = [optim.SGD(weight_params, lr=lr, momentum=0.9, nesterov=True, weight_decay=decay)]
