@@ -192,28 +192,69 @@ class ProbMaskLinear(nn.Linear):
         return x
 
 
-class SoftMaskedLinear(nn.Linear):
+# class SoftMaskedLinear(nn.Linear):
+#     def __init__(self, in_features, out_features, mask_initial_value=0.5):
+#         super(SoftMaskedLinear, self).__init__(in_features, out_features)
+#         self.mask_initial_value = torch.tensor(mask_initial_value).to('cuda:0')
+        
+#         self.in_features = in_features
+#         self.out_features = out_features    
+        
+#         nn.init.xavier_normal_(self.weight)
+#         self.init_weight = nn.Parameter(torch.zeros_like(self.weight), requires_grad=False)
+#         self.init_mask()
+        
+#     def init_mask(self):
+#         self.mask_weight = nn.Parameter(torch.Tensor(self.out_features, self.in_features))
+#         nn.init.constant_(self.mask_weight, self.mask_initial_value)
+
+#     def compute_mask(self, temp, ticket):
+#         scaling = 1. / (1. + torch.exp(-self.mask_initial_value))
+#         if ticket: 
+#             mask = (self.mask_weight > 0).float()
+#         else: 
+#             mask = torch.sigmoid(temp * self.mask_weight)
+#         return scaling * mask      
+        
+#     def prune(self, temp):
+#         self.mask_weight.data = torch.clamp(temp * self.mask_weight.data, max=self.mask_initial_value)   
+
+#     def forward(self, x, temp=1, ticket=False):
+#         self.mask = self.compute_mask(temp, ticket)
+#         masked_weight = self.weight * self.mask
+#         out = F.linear(x, masked_weight)        
+#         return out
+        
+#     def checkpoint(self):
+#         self.init_weight.data = self.weight.clone()       
+        
+#     def rewind_weights(self):
+#         self.weight.data = self.init_weight.clone()
+
+#     def extra_repr(self):
+#         return '{}, {}'.format(self.in_features, self.out_features)
+
+class SoftMaskedLinear(nn.Module):
     def __init__(self, in_features, out_features, mask_initial_value=0.5):
-        super(SoftMaskedLinear, self).__init__(in_features, out_features)
-        self.mask_initial_value = torch.tensor(mask_initial_value).to('cuda:0')
+        super(SoftMaskedLinear, self).__init__()
+        self.mask_initial_value = mask_initial_value
         
         self.in_features = in_features
         self.out_features = out_features    
         
+        self.weight = nn.Parameter(torch.Tensor(out_features, in_features))
         nn.init.xavier_normal_(self.weight)
         self.init_weight = nn.Parameter(torch.zeros_like(self.weight), requires_grad=False)
         self.init_mask()
         
     def init_mask(self):
-        self.mask_weight = nn.Parameter(torch.Tensor(self.out_features, self.in_features))
+        self.mask_weight = nn.Parameter(torch.Tensor(self.out_channels, self.in_channels))
         nn.init.constant_(self.mask_weight, self.mask_initial_value)
 
     def compute_mask(self, temp, ticket):
-        scaling = 1. / (1. + torch.exp(-self.mask_initial_value))
-        if ticket: 
-            mask = (self.mask_weight > 0).float()
-        else: 
-            mask = torch.sigmoid(temp * self.mask_weight)
+        scaling = 1. / F.sigmoid(self.mask_initial_value)
+        if ticket: mask = (self.mask_weight > 0).float()
+        else: mask = F.sigmoid(temp * self.mask_weight)
         return scaling * mask      
         
     def prune(self, temp):
@@ -224,12 +265,9 @@ class SoftMaskedLinear(nn.Linear):
         masked_weight = self.weight * self.mask
         out = F.linear(x, masked_weight)        
         return out
-        
+    
     def checkpoint(self):
         self.init_weight.data = self.weight.clone()       
         
     def rewind_weights(self):
         self.weight.data = self.init_weight.clone()
-
-    def extra_repr(self):
-        return '{}, {}'.format(self.in_features, self.out_features)
