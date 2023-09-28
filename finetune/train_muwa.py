@@ -60,7 +60,7 @@ def masked_forward_linear(self, x: torch.Tensor):
 
 def add_masked_layers(model):
     for name, module in model.named_modules():
-        if 'q_proj' in name or 'v_proj' in name:
+        if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
             module.mask = torch.ones_like(module.weight)
             # Modify forward method
             module.forward = masked_forward_linear.__get__(module)
