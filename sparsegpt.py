@@ -348,34 +348,28 @@ class SparseGPT:
         Hinv = H
 
         mask = None
-        W_metric = torch.abs(self.layer.weight.data)
-        thresh = torch.sort(W_metric.flatten().cuda())[0][int(self.layer.weight.numel()*0.5)].cpu()
-        W_mask = W_metric<=thresh
-        self.layer.weight.data[~W_mask] = 0
-        return
-
 
         # apply mask from pgd
-        # model = copy.deepcopy(self.layer)
-        # input = self.inp1.clone().squeeze(0) 
-        # output = self.out1.clone().squeeze(0) 
+        model = copy.deepcopy(self.layer)
+        input = self.inp1.clone().squeeze(0) 
+        output = self.out1.clone().squeeze(0) 
 
-        # input = input.to(torch.float32)  # Convert data to Float
-        # output = output.to(torch.float32)  # Now output has shape [2048, 768]
-        # model = model.to(torch.float32)  # Convert model parameters to Float
+        input = input.to(torch.float32)  # Convert data to Float
+        output = output.to(torch.float32)  # Now output has shape [2048, 768]
+        model = model.to(torch.float32)  # Convert model parameters to Float
 
-        # from torch.utils.data import TensorDataset, DataLoader
-        # dataset = TensorDataset(input, output)
-        # train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
-        # with torch.enable_grad():
-        #     model.train()
-        #     mask = PGD(model, 0.5, train_loader, self.dev)
-        #     print(f'shape1 {torch.sum(mask) / (model.weight_mask.shape[0] * model.weight_mask.shape[1])}')
-        # self.layer.weight.data[~mask] = 0
-        # del model
-        # del dataset
-        # del train_loader
-        # return
+        from torch.utils.data import TensorDataset, DataLoader
+        dataset = TensorDataset(input, output)
+        train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+        with torch.enable_grad():
+            model.train()
+            mask = PGD(model, 0.5, train_loader, self.dev)
+            print(f'shape1 {torch.sum(mask) / (model.weight_mask.shape[0] * model.weight_mask.shape[1])}')
+        self.layer.weight.data[~mask] = 0
+        del model
+        del dataset
+        del train_loader
+        return
         
         for i1 in range(0, self.columns, blocksize):
             i2 = min(i1 + blocksize, self.columns)
