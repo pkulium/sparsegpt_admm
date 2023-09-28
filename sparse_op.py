@@ -195,7 +195,7 @@ class ProbMaskLinear(nn.Linear):
 class SoftMaskedLinear(nn.Linear):
     def __init__(self, in_features, out_features, mask_initial_value=0.5):
         super(SoftMaskedLinear, self).__init__(in_features, out_features)
-        self.mask_initial_value = mask_initial_value
+        self.mask_initial_value = torch.tensor(mask_initial_value)
         
         self.in_features = in_features
         self.out_features = out_features    
