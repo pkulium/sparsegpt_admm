@@ -193,8 +193,10 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
     num_params = sum([p.numel() for p in trainable_params])
     print("Total number of parameters: {}".format(num_params))
 
-    weight_params = map(lambda a: a[1], filter(lambda p: p[1].requires_grad and 'mask' not in p[0], model.named_parameters()))
-    mask_params = map(lambda a: a[1], filter(lambda p: p[1].requires_grad and 'mask' in p[0], model.named_parameters()))
+    # weight_params = map(lambda a: a[1], filter(lambda p: p[1].requires_grad and 'mask' not in p[0], model.named_parameters()))
+    # mask_params = map(lambda a: a[1], filter(lambda p: p[1].requires_grad and 'mask' in p[0], model.named_parameters()))
+    weight_params = [model.weight, model.bias]
+    mask_params = [model.mask_weight]
 
     model.ticket = False
     weight_optim = optim.SGD(weight_params, lr=lr, momentum=0.9, nesterov=True, weight_decay=decay)
