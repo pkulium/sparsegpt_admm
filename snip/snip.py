@@ -142,30 +142,32 @@ def PGD(net, keep_ratio, train_dataloader, device):
 import torch.optim as optim
 def VRPEG(model, keep_ratio, train_dataloader, device):
    # Define the optimizer, you can use any optimizer of your choice
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    import torch.optim as optim
+    model.linear.weight.requires_grad = False
+    if model.linear.bias is not None:
+        model.linear.bias.requires_grad = False
 
-    # Define the loss function
-    criterion = nn.MSELoss()
+    # Define the optimizer, loss function, and regularization strength
+    optimizer = optim.Adam([model.mask], lr=0.01)  # Only optimize the mask
+    mse_loss = nn.MSELoss()
+    lambda_sparsity = 0.1  # Regularization strength for sparsity constraint
 
-    # Number of epochs
-    num_epochs = 10
-
-    # Training Loop
-    for epoch in range(num_epochs):
-        for inputs, targets in train_dataloader:
-            inputs, targets = inputs.to(device), targets.to(device)
-            # Zero the parameter gradients
+    # Assume train_loader is already defined and provides batches of (input, output_a)
+    for epoch in range(100):  # Number of epochs
+        for input_tensor, label in train_dataloader:  # label is output_a
             optimizer.zero_grad()
             
             # Forward pass
-            outputs = model(inputs)
+            output_model = model(input_tensor)
             
-            # Calculate loss
-            loss = criterion(outputs, targets)
+            # Compute the loss
+            loss_mse = mse_loss(output_model, label)  # Compare output_model with label (output_a)
+            sparsity_constraint = lambda_sparsity * torch.abs(torch.sum(torch.sigmoid(model.mask)) - 0.5 * model.mask.numel())
+            loss = loss_mse + sparsity_constraint
             
             # Backward pass and optimization
             loss.backward()
             optimizer.step()
             
-        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
-    return model.subnet
+        # Print the loss values at the end of each epoch
+        print(f"Epoch {epoch}, MSE Loss: {loss_mse.item()}, Sparsity Constraint: {sparsity_constraint.item()}, Total Loss: {loss.item()}")

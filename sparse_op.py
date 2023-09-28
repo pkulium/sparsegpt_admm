@@ -192,13 +192,14 @@ class ProbMaskLinear(nn.Linear):
         return x
 
 
-class TrainableBinaryMaskedLinearLayer(nn.Module):
+class SparseBinaryMaskedLinearLayer(nn.Module):
     def __init__(self, in_features, out_features, bias=True):
-        super(TrainableBinaryMaskedLinearLayer, self).__init__()
+        super(SparseBinaryMaskedLinearLayer, self).__init__()
         self.linear = nn.Linear(in_features, out_features, bias=bias)
         self.mask = nn.Parameter(torch.rand((out_features, in_features)), requires_grad=True)
         
     def forward(self, x):
-        binary_mask = torch.round(torch.sigmoid(self.mask))
+        binary_mask = (torch.sigmoid(self.mask) >= 0.5).float()  # Sigmoid and Hard thresholding
         masked_weight = self.linear.weight * binary_mask
         return nn.functional.linear(x, masked_weight, self.linear.bias)
+
