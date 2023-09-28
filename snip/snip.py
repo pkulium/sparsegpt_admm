@@ -92,6 +92,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
             # nn.init.xavier_normal_(layer.weight_mask)
             nn.init.constant_(layer.weight_mask, keep_ratio)
             layer.weight.requires_grad = False
+            layer.bias.requires_grad = False
             
 
         # Override the forward methods:
@@ -228,7 +229,7 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
 
 
     for epoch in range(epochs):
-        print('\t--------- Epoch {} -----------'.format(epoch))
+        # print('\t--------- Epoch {} -----------'.format(epoch))
         model.train()
         if epoch > 0: model.temp *= temp_increase  
         if outer_round == 0 and epoch == rewind_epoch: model.checkpoint()
