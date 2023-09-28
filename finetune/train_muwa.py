@@ -47,7 +47,7 @@ def print_trainable_parameters(model):
 
 import torch.nn.functional as F    
 def masked_self_forward_linear(self, input: torch.Tensor) -> torch.Tensor:
-    return F.linear(input, F.transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
+    return F.linear(input, torch.transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
 
 def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
     if self.active_adapter not in self.lora_A.keys():
