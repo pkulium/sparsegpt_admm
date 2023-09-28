@@ -62,7 +62,6 @@ def add_masked_layers(model):
     for name, module in model.named_modules():
         if 'q_proj' in name or 'v_proj' in name:
             module.mask = torch.ones_like(module.weight)
-            module.mask.requires_grad = True
             
             # Modify forward method
             module.forward = masked_forward_linear.__get__(module)
