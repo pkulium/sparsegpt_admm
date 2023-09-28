@@ -90,20 +90,6 @@ def PGD(net, keep_ratio, train_dataloader, device):
         if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
             layer.weight_mask = nn.Parameter(torch.zeros_like(layer.weight))
             nn.init.xavier_normal_(layer.weight_mask)
-            # Get the total number of elements in the weight
-            # mask_size = layer.weight_mask.numel()
-
-            # # Calculate the number of ones and zeros
-            # ones_size = mask_size // 2
-            # zeros_size = mask_size - ones_size
-
-            # # Create a mask with 0.5 sparsity and move it to the correct device
-            # mask_init = torch.cat([torch.ones(ones_size), torch.zeros(zeros_size)]).to(layer.weight.device)
-            # mask_init = mask_init[torch.randperm(mask_size)].view_as(layer.weight_mask)
-
-            # # Initialize the weight_mask parameter
-            # layer.weight_mask = nn.Parameter(mask_init)
-
             layer.weight.requires_grad = False
             
 

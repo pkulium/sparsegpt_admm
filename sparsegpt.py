@@ -369,8 +369,6 @@ class SparseGPT:
         del model
         del dataset
         del train_loader
-        if DEBUG:
-            print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
         return
         
         for i1 in range(0, self.columns, blocksize):
@@ -473,11 +471,9 @@ class SparseGPT:
 
         # apply mask from pgd
         out_features, in_features = self.layer.weight.shape
-        model = SparseBinaryMaskedLinearLayer(in_features = in_features, out_features=out_features)
-        model.linear.weight.data = self.layer.weight.data.clone()
-        if self.layer.bias is not None:
-            model.linear.bias.data = self.layer.bias.data.clone()
-
+        model = SoftMaskedLinear(in_features=in_features, out_features=out_features).to(self.dev)
+        model.weight.data = self.layer.weight.data.clone()
+        model.bias.data = self.layer.bias.data.clone()
         input = self.inp1.clone().squeeze(0) 
         output = self.out1.clone().squeeze(0) 
 
