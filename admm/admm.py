@@ -15,7 +15,7 @@ try:
 except ImportError:
     from io import BytesIO         # Python 3.x
 
-class Config:
+class Custom_Config:
     pass
 
 class ADMM:

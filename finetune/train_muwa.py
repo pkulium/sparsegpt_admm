@@ -146,14 +146,14 @@ trainer = transformers.Trainer(
     
 
 # # Initialize Z, U, and args as per your requirements
-import admm
-config = admm.Config()
+from ..admm import Custom_Config, ADMM
+config = Custom_Config()
 config.model = model 
 config.prune_ratios = 0.5
 config.rhos = 0.01
 config.sparsity_type = None
-ADMM = admm.ADMM(config)
-print(ADMM)
+admm = ADMM(config)
+print(admm)
 # Initialize the callback
 # admm_callback = ADMMCallback(ADMM)
 
