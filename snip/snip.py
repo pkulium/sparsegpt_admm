@@ -199,6 +199,7 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
     weight_optim = optim.SGD(weight_params, lr=lr, momentum=0.9, nesterov=True, weight_decay=decay)
     mask_optim = optim.SGD(mask_params, lr=lr, momentum=0.9, nesterov=True)
     optimizers = [weight_optim, mask_optim]
+    criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
     for outer_round in range(rounds):
         print('--------- Round {} -----------'.format(outer_round))
         for epoch in range(epochs):
@@ -212,11 +213,9 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
                 data, target = data.to(device), target.to(device)
                 for optimizer in optimizers: optimizer.zero_grad()
                 output = model(data)
-                pred = output.max(1)[1]
-                batch_correct = pred.eq(target.data.view_as(pred)).sum()
                 masks = [m.mask for m in model.mask_modules]
                 entries_sum = sum(m.sum() for m in masks)
-                loss = F.cross_entropy(output, target) + lmbda * entries_sum
+                loss = criterion(output, target) + lmbda * entries_sum
                 loss.backward()
                 for optimizer in optimizers: optimizer.step()
         model.temp = 1
@@ -226,23 +225,21 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
     optimizers = [optim.SGD(weight_params, lr=lr, momentum=0.9, nesterov=True, weight_decay=decay)]
     model.ticket = True
     model.rewind_weights()
-    for outer_round in range(rounds):
-            print('--------- Round {} -----------'.format(outer_round))
-            for epoch in range(epochs):
-                print('\t--------- Epoch {} -----------'.format(epoch))
-                model.train()
-                if epoch > 0: model.temp *= temp_increase  
-                if outer_round == 0 and epoch == rewind_epoch: model.checkpoint()
-                for optimizer in optimizers: adjust_learning_rate(optimizer, epoch)
 
-                for batch_idx, (data, target) in enumerate(train_dataloader):
-                    data, target = data.to(device), target.to(device)
-                    for optimizer in optimizers: optimizer.zero_grad()
-                    output = model(data)
-                    pred = output.max(1)[1]
-                    batch_correct = pred.eq(target.data.view_as(pred)).sum()
-                    masks = [m.mask for m in model.mask_modules]
-                    entries_sum = sum(m.sum() for m in masks)
-                    loss = F.cross_entropy(output, target) + lmbda * entries_sum
-                    loss.backward()
-                    for optimizer in optimizers: optimizer.step()
+
+    for epoch in range(epochs):
+        print('\t--------- Epoch {} -----------'.format(epoch))
+        model.train()
+        if epoch > 0: model.temp *= temp_increase  
+        if outer_round == 0 and epoch == rewind_epoch: model.checkpoint()
+        for optimizer in optimizers: adjust_learning_rate(optimizer, epoch)
+
+        for batch_idx, (data, target) in enumerate(train_dataloader):
+            data, target = data.to(device), target.to(device)
+            for optimizer in optimizers: optimizer.zero_grad()
+            output = model(data)
+            masks = [m.mask for m in model.mask_modules]
+            entries_sum = sum(m.sum() for m in masks)
+            loss = criterion(output, target) + lmbda * entries_sum
+            loss.backward()
+            for optimizer in optimizers: optimizer.step()
