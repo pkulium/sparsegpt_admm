@@ -153,7 +153,7 @@ config.prune_ratios = 0.5
 config.rhos = 0.01
 config.sparsity_type = None
 ADMM = admm.ADMM(config)
-
+print(ADMM)
 # Initialize the callback
 # admm_callback = ADMMCallback(ADMM)
 
