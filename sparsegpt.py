@@ -350,8 +350,8 @@ class SparseGPT:
         mask = None
         W_metric = torch.abs(self.layer.weight.data)
         thresh = torch.sort(W_metric.flatten().cuda())[0][int(self.layer.weight.numel()*0.5)].cpu()
-        W_mask = (W_metric<=thresh)
-        self.layer.weight.data[~mask] = 0
+        W_mask = W_metric<=thresh
+        self.layer.weight.data[~W_mask] = 0
         return
 
 
