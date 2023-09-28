@@ -20,10 +20,12 @@ data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=102
 
  
 for param in model.parameters():
-  param.requires_grad = False    if param.ndim == 1:
+    param.requires_grad = False    
+    if param.ndim == 1:
         param.data = param.data.to(torch.float32)
 
-model.gradient_checkpointing_enable()  model.enable_input_require_grads()
+model.gradient_checkpointing_enable()  
+model.enable_input_require_grads()
 
 class CastOutputToFloat(nn.Sequential):
   def forward(self, x): return super().forward(x).to(torch.float32)
@@ -57,81 +59,135 @@ config = LoraConfig(
 model = get_peft_model(model, config)
 print_trainable_parameters(model)
 
-trainer = transformers.Trainer(
-    model=model, 
-    train_dataset=data['train'],
-    args=transformers.TrainingArguments(
-        per_device_train_batch_size=4, 
-        gradient_accumulation_steps=4,
-        warmup_steps=100, 
-        num_train_epochs=2,                 learning_rate=2e-4, 
-        fp16=True,
-        logging_steps=10, 
-        output_dir='outputs'
-    ),
-    data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False)
-)
-model.config.use_cache = False 
-
-trainer.train(resume_from_checkpoint = False)
 
 
-from transformers import TrainerCallback
+import torch
+from torch.utils.data import DataLoader
+from transformers import AdamW, get_linear_schedule_with_warmup
+# Setup DataLoader
+batch_size = 4 * 4  # per_device_train_batch_size * gradient_accumulation_steps
+dataloader = DataLoader(data['train'], batch_size=batch_size, shuffle=True)
 
-class ADMMCallback(TrainerCallback):
-    def __init__(self, Z, U, admm_args):
-        self.Z = Z
-        self.U = U
-        self.admm_args = admm_args
+# Setup device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+
+# Setup optimizer
+optimizer = AdamW(model.parameters(), lr=2e-4)
+
+# Setup scheduler
+num_epochs = 2
+warmup_steps = 100
+total_steps = len(dataloader) * num_epochs
+scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps)
+
+# Custom training loop
+for epoch in range(num_epochs):
+    model.train()
+    total_loss = 0.0
     
-    def on_step_end(self, args, state, control, model=None, **kwargs):
-        # This will be executed at the end of each training step
-        # You can perform optimizer step, zero_grad, etc. here if needed
-        # But usually, this is handled by the Trainer itself
+    for batch in dataloader:
+        # Prepare inputs and targets and move them to the device
+        inputs = batch['input_ids'].to(device)
+        labels = inputs.clone().to(device)  # Assuming labels are the same as input_ids for causal LM
         
-        # If you need to access or modify model parameters, optimizer, etc.
-        # You can access them using the `model` and `trainer` objects
-        # For example: model.parameters(), trainer.optimizer, etc.
-        pass
+        # Forward pass
+        outputs = model(inputs, labels=labels)
+        loss = outputs.loss
+        total_loss += loss.item()
+        
+        # Backward pass and optimization
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+        optimizer.zero_grad()
     
-    def on_epoch_end(self, args, state, control, model=None, **kwargs):
-        # This will be executed at the end of each epoch
-        # You can perform your X, Z, U updates here
-        X = update_X(model)
-        self.Z = update_Z_l1(X, self.U, self.args) if self.args.l1 else update_Z(X, self.U, self.args)
-        self.U = update_U(self.U, X, self.Z)
+    # Print average loss after each epoch
+    avg_loss = total_loss / len(dataloader)
+    print(f"Epoch {epoch + 1}, Loss: {avg_loss}")
     
-    def compute_loss(self, model, inputs, return_outputs=False):
-        # Compute the original loss
-        outputs = model(**inputs)
-        original_loss = outputs.loss if hasattr(outputs, "loss") else None
+model.save_pretrained("lora-muwa-1.3b-opt")
+
+# If needed, you can now evaluate your model on validation dataset.
+
+
+# trainer = transformers.Trainer(
+#     model=model, 
+#     train_dataset=data['train'],
+#     args=transformers.TrainingArguments(
+#         per_device_train_batch_size=4, 
+#         gradient_accumulation_steps=4,
+#         warmup_steps=100, 
+#         num_train_epochs=2,                 
+#         learning_rate=2e-4, 
+#         fp16=True,
+#         logging_steps=10, 
+#         output_dir='outputs'
+#     ),
+#     data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False)
+# )
+# model.config.use_cache = False 
+
+# trainer.train(resume_from_checkpoint = False)
+
+
+# from transformers import TrainerCallback
+
+# class ADMMCallback(TrainerCallback):
+#     def __init__(self, Z, U, admm_args):
+#         self.Z = Z
+#         self.U = U
+#         self.admm_args = admm_args
+    
+#     def on_step_end(self, args, state, control, model=None, **kwargs):
+#         # This will be executed at the end of each training step
+#         # You can perform optimizer step, zero_grad, etc. here if needed
+#         # But usually, this is handled by the Trainer itself
         
-        # Compute the admm_loss
-        output = outputs.logits if hasattr(outputs, "logits") else None
-        target = inputs["labels"] if "labels" in inputs else None
-        admm_loss_value = admm_loss(self.admm_args, self.args.device, model, self.Z, self.U, output, target)
+#         # If you need to access or modify model parameters, optimizer, etc.
+#         # You can access them using the `model` and `trainer` objects
+#         # For example: model.parameters(), trainer.optimizer, etc.
+#         pass
         
-        # Combine the original loss and the admm_loss
-        combined_loss = original_loss + admm_loss_value
+    
+#     def on_epoch_end(self, args, state, control, model=None, **kwargs):
+#         # This will be executed at the end of each epoch
+#         # You can perform your X, Z, U updates here
+#         X = self.update_X(model)
+#         self.Z = self.update_Z_l1(X, self.U, self.args) if self.args.l1 else update_Z(X, self.U, self.args)
+#         self.U = self.update_U(self.U, X, self.Z)
+    
+#     def compute_loss(self, model, inputs, return_outputs=False):
+#         # Compute the original loss
+#         outputs = model(**inputs)
+#         original_loss = outputs.loss if hasattr(outputs, "loss") else None
         
-        return (combined_loss, outputs) if return_outputs else combined_loss
+#         # Compute the admm_loss
+#         output = outputs.logits if hasattr(outputs, "logits") else None
+#         target = inputs["labels"] if "labels" in inputs else None
+#         admm_loss_value = admm_loss(self.admm_args, self.args.device, model, self.Z, self.U, output, target)
+        
+#         # Combine the original loss and the admm_loss
+#         combined_loss = original_loss + admm_loss_value
+        
+#         return (combined_loss, outputs) if return_outputs else combined_loss
 
 
-# Initialize Z, U, and args as per your requirements
-Z, U = lora_initialize_Z_and_U(model)
-admm_args = None
+# # Initialize Z, U, and args as per your requirements
+# Z, U = lora_initialize_Z_and_U(model)
+# admm_args = None
 
-# Initialize the callback
-admm_callback = ADMMCallback(Z, U, admm_args)
+# # Initialize the callback
+# admm_callback = ADMMCallback(Z, U, admm_args)
 
-# Initialize the Trainer with your custom callback
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_dataset,
-    eval_dataset=eval_dataset,
-    callbacks=[admm_callback]  # Pass the custom callback here
-)
+# # Initialize the Trainer with your custom callback
+# trainer = Trainer(
+#     model=model,
+#     args=training_args,
+#     train_dataset=train_dataset,
+#     eval_dataset=eval_dataset,
+#     callbacks=[admm_callback]  # Pass the custom callback here
+# )
 
-# Start training
-trainer.train()
+# # Start training
+# trainer.train()
