@@ -248,7 +248,7 @@ class SoftMaskedLinear(nn.Module):
         self.init_mask()
         
     def init_mask(self):
-        self.mask_weight = nn.Parameter(torch.Tensor(self.out_channels, self.in_channels))
+        self.mask_weight = nn.Parameter(torch.Tensor(self.out_features, self.in_features))
         nn.init.constant_(self.mask_weight, self.mask_initial_value)
 
     def compute_mask(self, temp, ticket):
