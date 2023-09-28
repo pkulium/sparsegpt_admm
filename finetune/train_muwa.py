@@ -6,7 +6,7 @@ from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 
 model = AutoModelForCausalLM.from_pretrained(
     "facebook/opt-125m", 
-    # load_in_8bit=True, 
+    load_in_8bit=True, 
     device_map='auto',
 )
 
