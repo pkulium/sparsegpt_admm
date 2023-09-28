@@ -201,6 +201,7 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
     optimizers = [weight_optim, mask_optim]
     criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
     for outer_round in range(rounds):
+        model.temp = 1
         print('--------- Round {} -----------'.format(outer_round))
         for epoch in range(epochs):
             print('\t--------- Epoch {} -----------'.format(epoch))
@@ -218,7 +219,6 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
                 loss = criterion(output, target) + lmbda * entries_sum
                 loss.backward()
                 for optimizer in optimizers: optimizer.step()
-        model.temp = 1
         if outer_round != rounds-1: model.prune()
 
     print('--------- Training final ticket -----------')
