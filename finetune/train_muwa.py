@@ -146,7 +146,7 @@ trainer = transformers.Trainer(
     
 
 # # Initialize Z, U, and args as per your requirements
-from ..admm import Custom_Config, ADMM
+from admm import Custom_Config, ADMM
 config = Custom_Config()
 config.model = model 
 config.prune_ratios = 0.5
