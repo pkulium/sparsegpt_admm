@@ -40,10 +40,32 @@ def print_trainable_parameters(model):
     for _, param in model.named_parameters():
         all_param += param.numel()
         if param.requires_grad:
-            trainable_params += param.numel()
+            trainable_params += param.numel()            
     print(
         f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}"
     )
+
+import torch.nn.functional as F
+def masked_forward_linear(self, x: torch.Tensor):
+    def T(w):
+        return w.transpose(0, 1) if self.fan_in_fan_out else w
+    if self.merged:
+        return F.linear(x, T(self.weight), bias=self.bias)
+    else:
+        result = F.linear(x, T(self.weight), bias=self.bias)
+        if self.r > 0:
+            tmp = self.lora_dropout(x) @ T(self.merge_AB().T) * self.scaling
+            result += tmp * self.mask
+        return result
+
+def add_masked_layers(model):
+    for name, module in model.named_modules():
+        if 'q_proj' in name or 'v_proj' in name:
+            module.mask = torch.ones_like(module.weight)
+            module.mask.requires_grad = True
+            
+            # Modify forward method
+            module.forward = masked_forward_linear.__get__(module)
 
 from peft import LoraConfig, get_peft_model 
 
@@ -58,7 +80,7 @@ config = LoraConfig(
 
 model = get_peft_model(model, config)
 print_trainable_parameters(model)
-
+add_masked_layers(model)
 
 trainer = transformers.Trainer(
     model=model, 
