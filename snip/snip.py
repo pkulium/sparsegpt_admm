@@ -241,7 +241,7 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
             data, target = data.to(device), target.to(device)
             for optimizer in optimizers: optimizer.zero_grad()
             output = model(data)
-            masks = [m.mask for m in model.mask_modules]
+            masks = [model.mask_weight]
             entries_sum = sum(m.sum() for m in masks)
             loss = criterion(output, target) + lmbda * entries_sum
             loss.backward()
