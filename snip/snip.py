@@ -246,3 +246,4 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
             loss = criterion(output, target) + lmbda * entries_sum
             loss.backward()
             for optimizer in optimizers: optimizer.step()
+    return model.mask
