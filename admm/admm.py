@@ -15,6 +15,8 @@ try:
 except ImportError:
     from io import BytesIO         # Python 3.x
 
+class Config:
+    pass
 
 class ADMM:
      def __init__(self,config):
@@ -35,14 +37,11 @@ class ADMM:
           self.rhos = config.rhos
           
           self.sparsity_type = config.sparsity_type
-          for (name,W) in config.model.named_parameters():
-              if name not in config.prune_ratios:
+          for (name, W) in config.model.named_parameters():
+              if 'q_proj' not in name[-6:] or 'v_proj' not in name[-6:]:
                   continue
-              self.ADMM_U[name] = torch.zeros(W.shape).cuda() # add U 
+              self.ADMM_U[name] = W.prun_mask # add U 
               self.ADMM_Z[name] = torch.Tensor(W.shape).cuda() # add Z
-                        
-               
-
 
 def weight_pruning(config,weight,prune_ratio):
      """ 

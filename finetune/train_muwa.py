@@ -144,9 +144,15 @@ trainer.train(resume_from_checkpoint = False)
     
 
 # # Initialize Z, U, and args as per your requirements
-# import admm
-# ADMM = admm.ADMM(config)
-# # Initialize the callback
+import admm
+config = admm.Config()
+config.model = model 
+config.prune_ratios = 0.5
+config.rhos = 0.01
+config.sparsity_type = None
+ADMM = admm.ADMM(config)
+
+# Initialize the callback
 # admm_callback = ADMMCallback(ADMM)
 
 # # Initialize the Trainer with your custom callback
