@@ -78,7 +78,7 @@ def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
         result = self._linear(x)
         x = x.to(lora_A.weight.dtype)
         # result += lora_B(lora_A(dropout(x))) * scaling
-        tmp = self.mask * (lora_A.transpose(0, 1) @ lora_B.transpose(0, 1))
+        tmp = self.mask * (lora_A.weight.transpose(0, 1) @ lora_B.weight.transpose(0, 1))
         result += (dropout(x) @ tmp) * self.scaling
 
     result = result.to(previous_dtype)
