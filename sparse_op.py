@@ -192,7 +192,7 @@ class ProbMaskLinear(nn.Linear):
         return x
 
 
-class SoftMaskedLinear(nn.Module):
+class SoftMaskedLinear(nn.Linear):
     def __init__(self, in_features, out_features, mask_initial_value=0.5):
         super(SoftMaskedLinear, self).__init__()
         self.mask_initial_value = mask_initial_value
@@ -200,7 +200,6 @@ class SoftMaskedLinear(nn.Module):
         self.in_features = in_features
         self.out_features = out_features    
         
-        self.weight = nn.Parameter(torch.Tensor(out_features, in_features))
         nn.init.xavier_normal_(self.weight)
         self.init_weight = nn.Parameter(torch.zeros_like(self.weight), requires_grad=False)
         self.init_mask()
