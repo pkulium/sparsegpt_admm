@@ -49,7 +49,7 @@ import torch.nn.functional as F
 def masked_forward_linear(self, x: torch.Tensor):
     def T(w):
         return w.transpose(0, 1) if self.fan_in_fan_out else w
-    if self.r > 0 and not self.merged:
+    if self.r and not self.merged:
         result = F.linear(x, T(self.weight), bias=self.bias)            
         tmp = self.lora_A.transpose(0, 1) @ self.lora_B.transpose(0, 1)
         tmp = tmp * self.mask
