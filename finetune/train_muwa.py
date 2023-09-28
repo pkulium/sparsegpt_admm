@@ -64,49 +64,50 @@ print_trainable_parameters(model)
 import torch
 from torch.utils.data import DataLoader
 from transformers import AdamW, get_linear_schedule_with_warmup
-# Setup DataLoader
+
+# ... (Initialize the model, tokenizer, and configurations)
+
+# Prepare DataLoader
 batch_size = 4 * 4  # per_device_train_batch_size * gradient_accumulation_steps
 dataloader = DataLoader(data['train'], batch_size=batch_size, shuffle=True)
 
-# Setup device
+# Setup Device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
-# Setup optimizer
+# Setup Optimizer & Scheduler
 optimizer = AdamW(model.parameters(), lr=2e-4)
-
-# Setup scheduler
 num_epochs = 2
 warmup_steps = 100
 total_steps = len(dataloader) * num_epochs
 scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps)
 
-# Custom training loop
+# Training Loop
 for epoch in range(num_epochs):
     model.train()
-    total_loss = 0.0
-    
-    for batch in dataloader:
-        # Prepare inputs and targets and move them to the device
+    epoch_loss = 0.0
+    for step, batch in enumerate(dataloader):
         inputs = batch['input_ids'].to(device)
-        labels = inputs.clone().to(device)  # Assuming labels are the same as input_ids for causal LM
+        labels = inputs.clone().to(device)
         
-        # Forward pass
+        # Forward Pass
         outputs = model(inputs, labels=labels)
         loss = outputs.loss
-        total_loss += loss.item()
+        epoch_loss += loss.item()
         
-        # Backward pass and optimization
+        # Backward Pass
         loss.backward()
         optimizer.step()
         scheduler.step()
         optimizer.zero_grad()
+        
+        # Logging
+        if step % 10 == 0:
+            print(f"Epoch: {epoch + 1}, Step: {step}, Loss: {loss.item()}")
     
-    # Print average loss after each epoch
-    avg_loss = total_loss / len(dataloader)
-    print(f"Epoch {epoch + 1}, Loss: {avg_loss}")
-    
-model.save_pretrained("lora-muwa-1.3b-opt")
+    # Epoch End Logging
+    print(f"End of Epoch: {epoch + 1}, Average Loss: {epoch_loss / len(dataloader)}")
+
 
 # If needed, you can now evaluate your model on validation dataset.
 
