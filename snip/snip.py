@@ -204,7 +204,7 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
         model.temp = 1
         print('--------- Round {} -----------'.format(outer_round))
         for epoch in range(epochs):
-            print('\t--------- Epoch {} -----------'.format(epoch))
+            # print('\t--------- Epoch {} -----------'.format(epoch))
             model.train()
             if epoch > 0: model.temp *= temp_increase  
             if outer_round == 0 and epoch == rewind_epoch: model.checkpoint()
