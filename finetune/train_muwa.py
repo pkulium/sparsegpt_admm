@@ -115,8 +115,10 @@ trainer = transformers.Trainer(
     ),
     data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False)
 )
-model.config.use_cache = False 
-trainer.train(resume_from_checkpoint = False)
+# model.config.use_cache = False 
+# trainer.train(resume_from_checkpoint = False)
+
+
 
 
 
