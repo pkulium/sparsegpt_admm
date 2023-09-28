@@ -84,10 +84,6 @@ def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
     result = result.to(previous_dtype)
     return result
 
-           
-    result = result.to(previous_dtype)
-    return result
-
 def add_masked_layers(model):
     for name, module in model.named_modules():
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
@@ -117,7 +113,7 @@ trainer = transformers.Trainer(
         per_device_train_batch_size=4, 
         gradient_accumulation_steps=4,
         warmup_steps=100, 
-        num_train_epochs=2,                 
+        num_train_epochs=1,                 
         learning_rate=2e-4, 
         fp16=True,
         logging_steps=10, 
@@ -129,40 +125,41 @@ model.config.use_cache = False
 trainer.train(resume_from_checkpoint = False)
 
 
-from transformers import TrainerCallback
-class ADMMCallback(TrainerCallback):
-    def __init__(self, ADMM):
-        self.ADMM = ADMM
+
+# from transformers import TrainerCallback
+# class ADMMCallback(TrainerCallback):
+#     def __init__(self, ADMM):
+#         self.ADMM = ADMM
     
-    def on_step_end(self, args, state, control, model=None, **kwargs):
-        # This will be executed at the end of each training step
-        # You can perform optimizer step, zero_grad, etc. here if needed
-        # But usually, this is handled by the Trainer itself
+#     def on_step_end(self, args, state, control, model=None, **kwargs):
+#         # This will be executed at the end of each training step
+#         # You can perform optimizer step, zero_grad, etc. here if needed
+#         # But usually, this is handled by the Trainer itself
         
-        # If you need to access or modify model parameters, optimizer, etc.
-        # You can access them using the `model` and `trainer` objects
-        # For example: model.parameters(), trainer.optimizer, etc.
-        pass
+#         # If you need to access or modify model parameters, optimizer, etc.
+#         # You can access them using the `model` and `trainer` objects
+#         # For example: model.parameters(), trainer.optimizer, etc.
+#         pass
         
-    def on_epoch_end(self, args, state, control, model=None, **kwargs):
-        # This will be executed at the end of each epoch
-        # You can perform your X, Z, U updates here
-        X = self.update_X(model)
-        self.Z = self.update_Z_l1(X, self.U, self.args) if self.args.l1 else update_Z(X, self.U, self.args)
-        self.U = self.update_U(self.U, X, self.Z)
+#     def on_epoch_end(self, args, state, control, model=None, **kwargs):
+#         # This will be executed at the end of each epoch
+#         # You can perform your X, Z, U updates here
+#         X = self.update_X(model)
+#         self.Z = self.update_Z_l1(X, self.U, self.args) if self.args.l1 else update_Z(X, self.U, self.args)
+#         self.U = self.update_U(self.U, X, self.Z)
     
 
-# Initialize Z, U, and args as per your requirements
-import admm
-ADMM = admm.ADMM(config)
-# Initialize the callback
-admm_callback = ADMMCallback(ADMM)
+# # Initialize Z, U, and args as per your requirements
+# import admm
+# ADMM = admm.ADMM(config)
+# # Initialize the callback
+# admm_callback = ADMMCallback(ADMM)
 
-# Initialize the Trainer with your custom callback
-trainer = transformers.Trainer(
-    model=model,
-    callbacks=[admm_callback]  # Pass the custom callback here
-)
+# # Initialize the Trainer with your custom callback
+# trainer = transformers.Trainer(
+#     model=model,
+#     callbacks=[admm_callback]  # Pass the custom callback here
+# )
 
-# Start training
-trainer.train()
+# # Start training
+# trainer.train()
