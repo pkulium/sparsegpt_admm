@@ -45,19 +45,10 @@ def print_trainable_parameters(model):
         f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}"
     )
 
-import torch.nn.functional as F
-def masked_forward_linear(self, x: torch.Tensor):
-    def T(w):
-        return w.transpose(0, 1) if self.fan_in_fan_out else w
-    if self.r and not self.merged:
-        result = F.linear(x, T(self.weight), bias=self.bias)            
-        tmp = self.lora_A.transpose(0, 1) @ self.lora_B.transpose(0, 1)
-        tmp = tmp * self.mask
-        result += (self.lora_dropout(x) @ tmp) * self.scaling
-        return result
-    else:
-        return F.linear(x, T(self.weight), bias=self.bias)
-    
+import torch.nn.functional as F    
+def masked_self_forward_linear(self, input: torch.Tensor) -> torch.Tensor:
+    return F.linear(input, F.transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
+
 def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
     if self.active_adapter not in self.lora_A.keys():
         return self._linear(x)
@@ -78,7 +69,7 @@ def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
         result = self._linear(x)
         x = x.to(lora_A.weight.dtype)
         # result += lora_B(lora_A(dropout(x))) * scaling
-        tmp = self.mask * (lora_A.weight.transpose(0, 1) @ lora_B.weight.transpose(0, 1))
+        tmp = self.lora_mask * (lora_A.weight.transpose(0, 1) @ lora_B.weight.transpose(0, 1))
         result += (dropout(x) @ tmp) * scaling
 
     result = result.to(previous_dtype)
@@ -87,9 +78,11 @@ def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
 def add_masked_layers(model):
     for name, module in model.named_modules():
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
-            module.mask = torch.ones_like(module.weight)
+            module.lora_mask = torch.ones_like(module.weight)
+            module.prun_mask = torch.ones_like(module.weight)
             # Modify forward method
             module.forward = masked_forward_linear.__get__(module)
+            module._linear = masked_self_forward_linear.__get__(module)
 
 from peft import LoraConfig, get_peft_model 
 
