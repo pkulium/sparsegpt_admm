@@ -79,8 +79,8 @@ def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
 def add_masked_layers(model):
     for name, module in model.named_modules():
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
-            module.lora_mask = torch.ones_like(module.weight)
-            module.prun_mask = torch.ones_like(module.weight)
+            module.lora_mask = torch.ones_like(module.weight).to(module.weight.dtype)
+            module.prun_mask = torch.ones_like(module.weight).to(module.weight.dtype)
             # Modify forward method
             module.forward = masked_forward_linear.__get__(module)
             module._linear = masked_self_forward_linear.__get__(module)
@@ -118,6 +118,11 @@ add_masked_layers(model)
 # model.config.use_cache = False 
 # trainer.train(resume_from_checkpoint = False)
 
+def clip_mask(model, lower=0.0, upper=1.0):
+    params = [param for name, param in model.named_parameters() if 'lora_mask' in name]
+    with torch.no_grad():
+        for param in params:
+            param.clamp_(lower, upper)
 
 from transformers import TrainerCallback
 class ADMMCallback(TrainerCallback):
@@ -132,6 +137,7 @@ class ADMMCallback(TrainerCallback):
         # If you need to access or modify model parameters, optimizer, etc.
         # You can access them using the `model` and `trainer` objects
         # For example: model.parameters(), trainer.optimizer, etc.
+        clip_mask(model)
         self.update_X()
         self.update_Z()
         self.update_U()

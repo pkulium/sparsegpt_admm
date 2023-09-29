@@ -20,6 +20,7 @@ class Custom_Config:
 
 class ADMM:
      def __init__(self,config):
+          self.ADMM_X = {}
           self.ADMM_U = {}
           self.ADMM_Z = {}
           self.model = config.model
@@ -40,6 +41,7 @@ class ADMM:
           for (name, W) in config.model.named_parameters():
               if 'q_proj' not in name[-6:] or 'v_proj' not in name[-6:]:
                   continue
+              self.ADMM_X[name] = W.lora_mask
               self.ADMM_U[name] = W.prun_mask # add U 
               self.ADMM_Z[name] = torch.Tensor(W.shape).cuda() # add Z
 
