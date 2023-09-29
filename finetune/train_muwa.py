@@ -139,7 +139,7 @@ class ADMMCallback(TrainerCallback):
         :param outputs: The outputs of the model for this batch.
         """
         # Extract the original loss
-        loss = outputs.loss
+        # loss = outputs.loss
         
         # Compute your custom loss here
         # custom_loss = compute_custom_loss(inputs, outputs)
@@ -148,7 +148,7 @@ class ADMMCallback(TrainerCallback):
         # total_loss = loss + custom_loss
         
         # Update the loss in the outputs
-        outputs.loss = total_loss
+        # outputs.loss = total_loss
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
         # This will be executed at the end of each training step
