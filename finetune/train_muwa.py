@@ -5,12 +5,12 @@ import bitsandbytes as bnb
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 
 model = AutoModelForCausalLM.from_pretrained(
-    "facebook/opt-125m", 
+    "facebook/opt-1.3b", 
     # load_in_8bit=True, 
     device_map='auto',
 )
 
-tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
+tokenizer = AutoTokenizer.from_pretrained("facebook/opt-1.3b")
 
  
 import transformers
