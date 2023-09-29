@@ -100,6 +100,68 @@ model = get_peft_model(model, config)
 print_trainable_parameters(model)
 add_masked_layers(model)
 
+# trainer = transformers.Trainer(
+#     model=model, 
+#     train_dataset=data['train'],
+#     args=transformers.TrainingArguments(
+#         per_device_train_batch_size=4, 
+#         gradient_accumulation_steps=4,
+#         warmup_steps=100, 
+#         num_train_epochs=1,                 
+#         learning_rate=2e-4, 
+#         fp16=True,
+#         logging_steps=10, 
+#         output_dir='outputs'
+#     ),
+#     data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
+# )
+# model.config.use_cache = False 
+# trainer.train(resume_from_checkpoint = False)
+
+
+from transformers import TrainerCallback
+class ADMMCallback(TrainerCallback):
+    def __init__(self, admm):
+        self.admm = admm
+    
+    def on_step_end(self, args, state, control, model=None, **kwargs):
+        # This will be executed at the end of each training step
+        # You can perform optimizer step, zero_grad, etc. here if needed
+        # But usually, this is handled by the Trainer itself
+        
+        # If you need to access or modify model parameters, optimizer, etc.
+        # You can access them using the `model` and `trainer` objects
+        # For example: model.parameters(), trainer.optimizer, etc.
+        pass
+        
+    def on_epoch_end(self, args, state, control, model=None, **kwargs):
+        # This will be executed at the end of each epoch
+        # You can perform your X, Z, U updates here
+        self.update_X(model)
+        self.update_Z(X, self.U, self.args)
+        self.update_U(self.U, X, self.Z)
+    
+    def update_X(self, model):
+        pass
+
+    def update_Z(self, X, U, self.args):
+        pass
+
+    def update_U(self, U, X, Z):
+        pass
+
+# # Initialize Z, U, and args as per your requirements
+from admm import Custom_Config, ADMM
+config = Custom_Config()
+config.model = model 
+config.prune_ratios = 0.5
+config.rhos = 0.01
+config.sparsity_type = None
+admm = ADMM(config)
+print(admm)
+Initialize the callback
+admm_callback = ADMMCallback(ADMM)
+
 trainer = transformers.Trainer(
     model=model, 
     train_dataset=data['train'],
@@ -113,55 +175,8 @@ trainer = transformers.Trainer(
         logging_steps=10, 
         output_dir='outputs'
     ),
-    data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False)
+    data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
+    callbacks=[admm_callback]  # Pass the custom callback here
 )
-# model.config.use_cache = False 
-# trainer.train(resume_from_checkpoint = False)
-
-
-
-
-
-# from transformers import TrainerCallback
-# class ADMMCallback(TrainerCallback):
-#     def __init__(self, ADMM):
-#         self.ADMM = ADMM
-    
-#     def on_step_end(self, args, state, control, model=None, **kwargs):
-#         # This will be executed at the end of each training step
-#         # You can perform optimizer step, zero_grad, etc. here if needed
-#         # But usually, this is handled by the Trainer itself
-        
-#         # If you need to access or modify model parameters, optimizer, etc.
-#         # You can access them using the `model` and `trainer` objects
-#         # For example: model.parameters(), trainer.optimizer, etc.
-#         pass
-        
-#     def on_epoch_end(self, args, state, control, model=None, **kwargs):
-#         # This will be executed at the end of each epoch
-#         # You can perform your X, Z, U updates here
-#         X = self.update_X(model)
-#         self.Z = self.update_Z_l1(X, self.U, self.args) if self.args.l1 else update_Z(X, self.U, self.args)
-#         self.U = self.update_U(self.U, X, self.Z)
-    
-
-# # Initialize Z, U, and args as per your requirements
-from admm import Custom_Config, ADMM
-config = Custom_Config()
-config.model = model 
-config.prune_ratios = 0.5
-config.rhos = 0.01
-config.sparsity_type = None
-admm = ADMM(config)
-print(admm)
-# Initialize the callback
-# admm_callback = ADMMCallback(ADMM)
-
-# # Initialize the Trainer with your custom callback
-# trainer = transformers.Trainer(
-#     model=model,
-#     callbacks=[admm_callback]  # Pass the custom callback here
-# )
-
-# # Start training
-# trainer.train()
+model.config.use_cache = False 
+trainer.train(resume_from_checkpoint = False)
