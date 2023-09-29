@@ -132,22 +132,24 @@ class ADMMCallback(TrainerCallback):
         # If you need to access or modify model parameters, optimizer, etc.
         # You can access them using the `model` and `trainer` objects
         # For example: model.parameters(), trainer.optimizer, etc.
-        pass
+        self.update_X()
+        self.update_Z()
+        self.update_U()
         
     def on_epoch_end(self, args, state, control, model=None, **kwargs):
         # This will be executed at the end of each epoch
         # You can perform your X, Z, U updates here
-        self.update_X(model)
-        self.update_Z(X, self.U, self.args)
-        self.update_U(self.U, X, self.Z)
+        print('update_X')
+        pass
     
-    def update_X(self, model):
+    def update_X(self):
+        print('update_X')
         pass
 
-    def update_Z(self, X, U, self.args):
+    def update_Z(self):
         pass
 
-    def update_U(self, U, X, Z):
+    def update_U(self):
         pass
 
 # # Initialize Z, U, and args as per your requirements
