@@ -39,7 +39,6 @@ def print_trainable_parameters(model):
     all_param = 0
     for _, param in model.named_parameters():
         all_param += param.numel()
-        print(_)
         if param.requires_grad:
             trainable_params += param.numel()            
     print(
@@ -80,9 +79,9 @@ def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
 def add_masked_layers(model):
     for name, module in model.named_modules():
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
-            module.lora_mask = torch.ones_like(module.weight).to(module.weight.dtype)
+            module.lora_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
             module.lora_mask.requires_grad = True
-            module.prun_mask = torch.ones_like(module.weight).to(module.weight.dtype)
+            module.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
             # Modify forward method
             module.forward = masked_forward_linear.__get__(module)
             module._linear = masked_self_forward_linear.__get__(module)
