@@ -139,7 +139,7 @@ class ADMMCallback(TrainerCallback):
         # If you need to access or modify model parameters, optimizer, etc.
         # You can access them using the `model` and `trainer` objects
         # For example: model.parameters(), trainer.optimizer, etc.
-        clip_mask(model)
+        # clip_mask(model)
         self.update_X()
         self.update_Z()
         self.update_U()
