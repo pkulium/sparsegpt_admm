@@ -131,6 +131,25 @@ class ADMMCallback(TrainerCallback):
     def __init__(self, admm):
         self.admm = admm
     
+    def on_train_batch_end(self, trainer, inputs, outputs, **kwargs):
+        """
+        This method will be called when a training batch ends.
+        :param trainer: Instance of the Trainer class.
+        :param inputs: The inputs used for this batch.
+        :param outputs: The outputs of the model for this batch.
+        """
+        # Extract the original loss
+        loss = outputs.loss
+        
+        # Compute your custom loss here
+        custom_loss = compute_custom_loss(inputs, outputs)
+        
+        # Add the custom loss to the original loss
+        total_loss = loss + custom_loss
+        
+        # Update the loss in the outputs
+        outputs.loss = total_loss
+    
     def on_step_end(self, args, state, control, model=None, **kwargs):
         # This will be executed at the end of each training step
         # You can perform optimizer step, zero_grad, etc. here if needed
