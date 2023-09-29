@@ -80,6 +80,7 @@ def add_masked_layers(model):
     for name, module in model.named_modules():
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
             module.lora_mask = torch.ones_like(module.weight).to(module.weight.dtype)
+            module.lora_mask.requires_grad = True
             module.prun_mask = torch.ones_like(module.weight).to(module.weight.dtype)
             # Modify forward method
             module.forward = masked_forward_linear.__get__(module)
@@ -99,6 +100,7 @@ config = LoraConfig(
 model = get_peft_model(model, config)
 print_trainable_parameters(model)
 add_masked_layers(model)
+print_trainable_parameters(model)
 
 # trainer = transformers.Trainer(
 #     model=model, 
