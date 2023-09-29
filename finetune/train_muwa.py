@@ -149,6 +149,7 @@ class ADMMCallback(TrainerCallback):
         
         # Update the loss in the outputs
         # outputs.loss = total_loss
+        pass
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
         # This will be executed at the end of each training step
