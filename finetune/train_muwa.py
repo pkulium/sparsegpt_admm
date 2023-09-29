@@ -142,10 +142,10 @@ class ADMMCallback(TrainerCallback):
         loss = outputs.loss
         
         # Compute your custom loss here
-        custom_loss = compute_custom_loss(inputs, outputs)
+        # custom_loss = compute_custom_loss(inputs, outputs)
         
         # Add the custom loss to the original loss
-        total_loss = loss + custom_loss
+        # total_loss = loss + custom_loss
         
         # Update the loss in the outputs
         outputs.loss = total_loss
