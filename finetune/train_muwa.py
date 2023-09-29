@@ -30,7 +30,7 @@ model.enable_input_require_grads()
 class CastOutputToFloat(nn.Sequential):
   def forward(self, x): return super().forward(x).to(torch.float32)
 model.lm_head = CastOutputToFloat(model.lm_head)
- 
+ base_model.model.model.decoder.layers.0.self_attn.v_proj
 def print_trainable_parameters(model):
     """
     Prints the number of trainable parameters in the model.
@@ -39,6 +39,7 @@ def print_trainable_parameters(model):
     all_param = 0
     for _, param in model.named_parameters():
         all_param += param.numel()
+        print(_)
         if param.requires_grad:
             trainable_params += param.numel()            
     print(
