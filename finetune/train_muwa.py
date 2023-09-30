@@ -5,7 +5,7 @@ import bitsandbytes as bnb
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 
 import os
-os.environ[“WANDB_DISABLED”] = “true”
+os.environ['WANDB_DISABLED'] = True
 
 model = AutoModelForCausalLM.from_pretrained(
     "facebook/opt-1.3b", 
