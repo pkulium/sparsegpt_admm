@@ -145,10 +145,10 @@ class ADMMCallback(TrainerCallback):
         # Extract the original loss
         def compute_custom_loss(self):
             return self.model.lora_mask.norm()
-            
+
         loss = outputs.loss
         
-        Compute your custom loss here
+        # Compute your custom loss here
         custom_loss = compute_custom_loss(self)
         
         Add the custom loss to the original loss
