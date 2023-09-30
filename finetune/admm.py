@@ -39,7 +39,7 @@ class ADMM:
         self.rhos = config.rhos
         
         self.sparsity_type = config.sparsity_type
-        for name, module in model.named_modules():
+        for name, module in self.model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
                 self.rho[name] = 0.01
                 self.ADMM_X[name] = module.lora_mask
