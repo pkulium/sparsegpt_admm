@@ -133,7 +133,8 @@ def clip_mask(model, lower=0.0, upper=1.0):
 from transformers import TrainerCallback
 class ADMMCallback(TrainerCallback):
     def __init__(self, admm):
-        self.admm = admm
+        # self.admm = admm
+        pass
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
         # This will be executed at the end of each training step
@@ -178,7 +179,7 @@ config.sparsity_type = None
 admm = ADMM(config)
 print(admm)
 # Initialize the callback
-admm_callback = ADMMCallback(ADMM)
+admm_callback = ADMMCallback()
 
 
 from torch import nn
@@ -241,5 +242,6 @@ trainer = CustomTrainer(
     data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
     callbacks=[admm_callback]  # Pass the custom callback here
 )
+trainer.admm = admm
 model.config.use_cache = False 
 trainer.train(resume_from_checkpoint = False)
