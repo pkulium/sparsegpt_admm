@@ -184,7 +184,6 @@ admm_callback = ADMMCallback(ADMM)
 from torch import nn
 from transformers import Trainer
 
-
 class CustomTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
         """
@@ -226,7 +225,7 @@ class CustomTrainer(Trainer):
         return (loss, outputs) if return_outputs else loss
     
 
-trainer = transformers.Trainer(
+trainer = CustomTrainer(
     model=model, 
     train_dataset=data['train'],
     args=transformers.TrainingArguments(
