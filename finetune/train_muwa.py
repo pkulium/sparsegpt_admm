@@ -149,6 +149,7 @@ class ADMMCallback(TrainerCallback):
         custom_loss = compute_custom_loss(self)
         total_loss = loss + custom_loss
         outputs.loss = total_loss
+
         
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
