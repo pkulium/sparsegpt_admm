@@ -143,7 +143,8 @@ class ADMMCallback(TrainerCallback):
         # If you need to access or modify model parameters, optimizer, etc.
         # You can access them using the `model` and `trainer` objects
         # For example: model.parameters(), trainer.optimizer, etc.
-        # clip_mask(model)
+        print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
+        clip_mask(model)
         print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
         # for group in kwargs['optimizer'].param_groups:
             # for param in group['params']:
