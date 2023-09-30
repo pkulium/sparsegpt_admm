@@ -222,7 +222,8 @@ class CustomTrainer(Trainer):
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
 
         rho = 0.01
-        loss += rho / 2 * (model.lora_mask).norm()
+        for _, mask in self.admm.ADMM_X.items():
+            loss += rho / 2 * mask.norm()
         return (loss, outputs) if return_outputs else loss
     
 
