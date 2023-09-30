@@ -97,6 +97,15 @@ def random_binary_tensor(n, m):
     
     return tensor
 
+def get_n_m_sparse_matrix(w):
+    length = w.numel()
+    group = int(length / M)
+    w_tmp = w.t().detach().abs().reshape(group, M)
+    index = torch.argsort(w_tmp, dim=1)[:, :int(M - N)]
+    mask = torch.ones(w_tmp.shape, device=w_tmp.device)
+    mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape).t()
+    return w * mask, mask
+
 def add_masked_layers(model):
     for name, module in model.named_modules():
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
