@@ -143,16 +143,19 @@ class ADMMCallback(TrainerCallback):
         :param outputs: The outputs of the model for this batch.
         """
         # Extract the original loss
-        # loss = outputs.loss
+        def compute_custom_loss(self):
+            return self.model.lora_mask.norm()
+            
+        loss = outputs.loss
         
-        # Compute your custom loss here
-        # custom_loss = compute_custom_loss(inputs, outputs)
+        Compute your custom loss here
+        custom_loss = compute_custom_loss(self)
         
-        # Add the custom loss to the original loss
-        # total_loss = loss + custom_loss
+        Add the custom loss to the original loss
+        total_loss = loss + custom_loss
         
-        # Update the loss in the outputs
-        # outputs.loss = total_loss
+        Update the loss in the outputs
+        outputs.loss = total_loss
         pass
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
@@ -165,10 +168,9 @@ class ADMMCallback(TrainerCallback):
         # For example: model.parameters(), trainer.optimizer, etc.
         # clip_mask(model)
         print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
-        for group in kwargs['optimizer'].param_groups:
-            for param in group['params']:
-                print(param)  # This will print the Tensor representing each parameter being optimized
-        # print(args.trainer.optimizer.param_groups)
+        # for group in kwargs['optimizer'].param_groups:
+            # for param in group['params']:
+                # print(param)  # This will print the Tensor representing each parameter being optimized
         # self.update_X()
         # self.update_Z()
         # self.update_U()
