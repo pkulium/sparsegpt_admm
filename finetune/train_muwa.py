@@ -221,9 +221,8 @@ class CustomTrainer(Trainer):
             # We don't use .loss here since the model may return tuples instead of ModelOutput.
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
 
-        rho = 0.01
-        for _, mask in self.admm.ADMM_X.items():
-            loss += rho / 2 * mask.norm()
+        for name, mask in self.admm.ADMM_X.items():
+            loss += self.admm.rho[name] / 2 * mask.norm()
         return (loss, outputs) if return_outputs else loss
     
 
