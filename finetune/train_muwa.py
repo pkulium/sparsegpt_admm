@@ -135,23 +135,6 @@ class ADMMCallback(TrainerCallback):
     def __init__(self, admm):
         self.admm = admm
     
-    def on_train_batch_end(self, trainer, inputs, outputs, **kwargs):
-        """
-        This method will be called when a training batch ends.
-        :param trainer: Instance of the Trainer class.
-        :param inputs: The inputs used for this batch.
-        :param outputs: The outputs of the model for this batch.
-        """
-        def compute_custom_loss(self):
-            return self.model.lora_mask.norm()
-
-        loss = outputs.loss
-        custom_loss = compute_custom_loss(self)
-        total_loss = loss + custom_loss
-        outputs.loss = total_loss
-
-        
-    
     def on_step_end(self, args, state, control, model=None, **kwargs):
         # This will be executed at the end of each training step
         # You can perform optimizer step, zero_grad, etc. here if needed
@@ -161,7 +144,7 @@ class ADMMCallback(TrainerCallback):
         # You can access them using the `model` and `trainer` objects
         # For example: model.parameters(), trainer.optimizer, etc.
         # clip_mask(model)
-        print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
+        print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mas)
         # for group in kwargs['optimizer'].param_groups:
             # for param in group['params']:
                 # print(param)  # This will print the Tensor representing each parameter being optimized
@@ -196,6 +179,23 @@ admm = ADMM(config)
 print(admm)
 # Initialize the callback
 admm_callback = ADMMCallback(ADMM)
+
+
+from torch import nn
+from transformers import Trainer
+
+
+class CustomTrainer(Trainer):
+    def compute_loss(self, model, inputs, return_outputs=False):
+        labels = inputs.pop("labels")
+        # forward pass
+        outputs = model(**inputs)
+        logits = outputs.get("logits")
+        # compute custom loss (suppose one has 3 labels with different weights)
+        loss_fct = nn.CrossEntropyLoss(weight=torch.tensor([1.0, 2.0, 3.0], device=model.device))
+        loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+        return (loss, outputs) if return_outputs else loss
+    
 
 trainer = transformers.Trainer(
     model=model, 
