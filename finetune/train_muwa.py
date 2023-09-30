@@ -162,8 +162,7 @@ class ADMMCallback(TrainerCallback):
         # For example: model.parameters(), trainer.optimizer, etc.
         # clip_mask(model)
         print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
-        print(args.trainer.optimizer.param_groups)
-        exit(0)
+        # print(args.trainer.optimizer.param_groups)
         # self.update_X()
         # self.update_Z()
         # self.update_U()
