@@ -82,6 +82,7 @@ def add_masked_layers(model):
             module.lora_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype) * 0.5)
             module.lora_mask.requires_grad = True
             module.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
+            module.prun_mask.requires_grad = False
             # Modify forward method
             module.forward = masked_forward_linear.__get__(module)
             module._linear = masked_self_forward_linear.__get__(module)
