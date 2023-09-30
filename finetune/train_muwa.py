@@ -132,8 +132,7 @@ def clip_mask(model, lower=0.0, upper=1.0):
 
 from transformers import TrainerCallback
 class ADMMCallback(TrainerCallback):
-    def __init__(self, admm):
-        # self.admm = admm
+    def __init__(self):
         pass
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
