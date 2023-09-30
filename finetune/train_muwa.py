@@ -4,6 +4,9 @@ import torch.nn as nn
 import bitsandbytes as bnb
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 
+import os
+os.environ[“WANDB_DISABLED”] = “true”
+
 model = AutoModelForCausalLM.from_pretrained(
     "facebook/opt-1.3b", 
     # load_in_8bit=True, 
