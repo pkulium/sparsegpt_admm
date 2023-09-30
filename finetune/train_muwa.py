@@ -142,19 +142,12 @@ class ADMMCallback(TrainerCallback):
         :param inputs: The inputs used for this batch.
         :param outputs: The outputs of the model for this batch.
         """
-        # Extract the original loss
         def compute_custom_loss(self):
             return self.model.lora_mask.norm()
 
         loss = outputs.loss
-        
-        # Compute your custom loss here
         custom_loss = compute_custom_loss(self)
-        
-        # Add the custom loss to the original loss
         total_loss = loss + custom_loss
-        
-        Update the loss in the outputs
         outputs.loss = total_loss
         pass
     
