@@ -82,7 +82,7 @@ def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
 def add_masked_layers(model):
     for name, module in model.named_modules():
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
-            module.lora_mask = nn.Parameter(torch..randn_like(module.weight).to(module.weight.dtype))
+            module.lora_mask = nn.Parameter(torch.randn_like(module.weight).to(module.weight.dtype))
             module.lora_mask.requires_grad = True
             module.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
             module.prun_mask.requires_grad = False
