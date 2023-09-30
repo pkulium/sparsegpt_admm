@@ -79,10 +79,29 @@ def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
     result = result.to(previous_dtype)
     return result
 
+def random_binary_tensor(n, m):
+    # Calculate the number of ones needed
+    num_ones = (n * m) // 2
+    
+    # Create a tensor with all zeros
+    tensor = torch.zeros((n, m), dtype=torch.int)
+    
+    # Get the indices of the tensor
+    indices = torch.arange(n * m)
+    
+    # Shuffle the indices and select the first num_ones indices to set to 1
+    ones_indices = indices[torch.randperm(n * m)][:num_ones]
+    
+    # Set the selected indices to 1
+    tensor.view(-1)[ones_indices] = 1
+    
+    return tensor
+
 def add_masked_layers(model):
     for name, module in model.named_modules():
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
-            module.lora_mask = nn.Parameter(torch.randn_like(module.weight).to(module.weight.dtype))
+            row, col = module.weight.shape
+            module.lora_mask = nn.Parameter(random_binary_tensor(row, col).to(module.weight.dtype))
             module.lora_mask.requires_grad = True
             module.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
             module.prun_mask.requires_grad = False
