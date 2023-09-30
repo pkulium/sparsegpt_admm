@@ -44,7 +44,7 @@ class ADMM:
                 self.rho[name] = 0.01
                 self.ADMM_X[name] = module.lora_mask
                 self.ADMM_U[name] = module.prun_mask # add U 
-                self.ADMM_Z[name] = torch.Tensor(W.shape).cuda() # add Z
+                self.ADMM_Z[name] = torch.Tensor(module.lora_mask.shape).cuda() # add Z
 
 def weight_pruning(config,weight,prune_ratio):
      """ 
