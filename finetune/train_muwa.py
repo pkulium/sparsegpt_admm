@@ -211,4 +211,5 @@ trainer = transformers.Trainer(
     callbacks=[admm_callback]  # Pass the custom callback here
 )
 model.config.use_cache = False 
-trainer.train(resume_from_checkpoint = False)
+print(trainer.optimizer.param_groups)
+# trainer.train(resume_from_checkpoint = False)
