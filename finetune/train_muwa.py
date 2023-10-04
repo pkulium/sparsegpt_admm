@@ -135,22 +135,22 @@ print_trainable_parameters(model)
 add_masked_layers(model)
 print_trainable_parameters(model)
 
-trainer = transformers.Trainer(
-    model=model, 
-    train_dataset=data['train'],
-    args=transformers.TrainingArguments(
-        per_device_train_batch_size=4, 
-        gradient_accumulation_steps=4,
-        warmup_steps=100, 
-        num_train_epochs=1,                 
-        learning_rate=2e-4, 
-        fp16=True,
-        logging_steps=10, 
-        output_dir='outputs'
-    ),
-    data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
-)
-model.config.use_cache = False 
+# trainer = transformers.Trainer(
+#     model=model, 
+#     train_dataset=data['train'],
+#     args=transformers.TrainingArguments(
+#         per_device_train_batch_size=4, 
+#         gradient_accumulation_steps=4,
+#         warmup_steps=100, 
+#         num_train_epochs=1,                 
+#         learning_rate=2e-4, 
+#         fp16=True,
+#         logging_steps=10, 
+#         output_dir='outputs'
+#     ),
+#     data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
+# )
+# model.config.use_cache = False 
 # trainer.train(resume_from_checkpoint = False)
 
 def clip_mask(model, lower=0.0, upper=1.0):
