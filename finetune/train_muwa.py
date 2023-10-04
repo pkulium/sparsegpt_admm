@@ -250,13 +250,15 @@ class CustomTrainer(Trainer):
             # We don't use .loss here since the model may return tuples instead of ModelOutput.
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
 
-        print(f'loss before {loss}')
+        print(f'loss nature {loss}')
+        admm_loss = 0
         for name, mask in self.admm.ADMM_X.items():
             admm_loss = self.admm.rho[name] / 2 * (self.admm.ADMM_X[name] - self.admm.ADMM_U[name]).norm()
-            loss += admm_loss
+            admm_loss += admm_loss
             # if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
                 # print(f'loss:{admm_loss}')
-        print(f'loss after {loss}')
+        loss += admm_loss
+        print(f'loss admm {admm_loss}')
         return (loss, outputs) if return_outputs else loss
     
 
