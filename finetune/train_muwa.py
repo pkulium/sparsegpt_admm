@@ -114,7 +114,8 @@ def add_masked_layers(model):
             module.lora_mask = nn.Parameter(random_binary_tensor(row, col).to(module.weight.dtype))
             module.lora_mask.requires_grad = True
             module.prun_mask = nn.Parameter(torch.rand_like(module.weight).to(module.weight.dtype))
-            w, m = get_n_m_sparse_matrix(module.prun_mask)
+            _, m = get_n_m_sparse_matrix(module.prun_mask)
+            module.prun_mask.data = m.data.to(module.weight.dtype)
             module.prun_mask.requires_grad = False
             # Modify forward method
             module.forward = masked_forward_linear.__get__(module)
