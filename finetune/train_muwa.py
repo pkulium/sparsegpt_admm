@@ -158,8 +158,8 @@ def clip_mask(model, lower=0.0, upper=1.0):
     with torch.no_grad():
         for param in params:
             param.clamp_(lower, upper)
-            w, m = get_n_m_sparse_matrix(param)
-            param.data = m.to(param.dtype)
+            # w, m = get_n_m_sparse_matrix(param)
+            # param.data = m.to(param.dtype)
 
 from transformers import TrainerCallback
 class ADMMCallback(TrainerCallback):
