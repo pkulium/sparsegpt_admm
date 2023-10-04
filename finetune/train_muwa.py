@@ -261,7 +261,15 @@ class CustomTrainer(Trainer):
         loss += admm_loss
         print(f'loss admm {admm_loss}')
         return (loss, outputs) if return_outputs else loss
-    
+
+def switch(model):
+    for name, module in model.state_dict():
+        if module.requires_grad:
+            module.requires_grad = False
+    for name, module in model.named_modules():
+        if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
+            module.lora_mask.requires_grad = True
+
 
 trainer = CustomTrainer(
     model=model, 
@@ -281,5 +289,16 @@ trainer = CustomTrainer(
 )
 trainer.admm = admm
 model.config.use_cache = False 
+trainer.train_mask = False
 trainer.train(resume_from_checkpoint = False)
-model.save_pretrained("lora-muwa-1.3b-opt")
+switch(model)
+trainer.train_mask = True
+trainer.train(resume_from_checkpoint = False)
+
+
+
+
+
+
+
+# model.save_pretrained("lora-muwa-1.3b-opt")
