@@ -291,6 +291,7 @@ trainer = CustomTrainer(
     data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
     callbacks=[admm_callback]  # Pass the custom callback here
 )
+
 trainer.admm = admm
 model.config.use_cache = False 
 trainer.train(resume_from_checkpoint = False)
