@@ -206,7 +206,7 @@ from admm import Custom_Config, ADMM
 config = Custom_Config()
 config.model = model 
 config.prune_ratios = 0.5
-config.rhos = 0.01
+config.rhos = 0.1
 config.sparsity_type = None
 admm = ADMM(config)
 print(admm)
