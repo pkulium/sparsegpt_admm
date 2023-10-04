@@ -298,7 +298,9 @@ model.config.use_cache = False
 trainer.train_mask = False
 trainer.train(resume_from_checkpoint = False)
 switch(model)
+print_trainable_parameters(model)
 trainer.train_mask = True
+trainer.args.max_steps = 100
 trainer.train(resume_from_checkpoint = False)
 
 
