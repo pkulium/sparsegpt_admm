@@ -114,7 +114,7 @@ def add_masked_layers(model):
             module.lora_mask = nn.Parameter(random_binary_tensor(row, col).to(module.weight.dtype))
             module.lora_mask.requires_grad = True
             module.prun_mask = nn.Parameter(torch.rand_like(module.weight).to(module.weight.dtype))
-            _, m = get_n_m_sparse_matrix(module.prun_mask)
+            _, m = get_n_m_sparse_matrix(module.weight)
             module.prun_mask.data = m.data.to(module.weight.dtype)
             module.prun_mask.requires_grad = False
             # Modify forward method
@@ -254,9 +254,10 @@ class CustomTrainer(Trainer):
 
 
         for name, mask in self.admm.ADMM_X.items():
-            # if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
-                # print(f'mask:{mask}')
-            loss += self.admm.rho[name] / 2 * (self.admm.ADMM_X[name] - self.admm.ADMM_U[name]).norm()
+            admm_loss = self.admm.rho[name] / 2 * (self.admm.ADMM_X[name] - self.admm.ADMM_U[name]).norm()
+            loss += admm_loss
+            if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
+                print(f'mask:{mask}')
         return (loss, outputs) if return_outputs else loss
     
 
@@ -279,3 +280,4 @@ trainer = CustomTrainer(
 trainer.admm = admm
 model.config.use_cache = False 
 trainer.train(resume_from_checkpoint = False)
+model.save_pretrained("lora-muwa-1.3b-opt")
