@@ -98,6 +98,7 @@ def random_binary_tensor(n, m):
     return tensor
 
 def get_n_m_sparse_matrix(w):
+    N, M = 2, 4
     length = w.numel()
     group = int(length / M)
     w_tmp = w.t().detach().abs().reshape(group, M)
@@ -173,6 +174,7 @@ class ADMMCallback(TrainerCallback):
         # For example: model.parameters(), trainer.optimizer, etc.
         # print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
         clip_mask(model)
+        
         # print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
         # for group in kwargs['optimizer'].param_groups:
             # for param in group['params']:
