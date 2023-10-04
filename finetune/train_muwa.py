@@ -312,4 +312,4 @@ trainer = CustomTrainer(
 trainer.admm = admm
 model.config.use_cache = False 
 trainer.train(resume_from_checkpoint = False)
-# model.save_pretrained("lora-muwa-1.3b-opt")
+model.save_pretrained("lora-muwa-1.3b-opt")
