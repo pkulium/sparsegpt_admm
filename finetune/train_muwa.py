@@ -170,10 +170,7 @@ class ADMMCallback(TrainerCallback):
         # This will be executed at the end of each training step
         # You can perform optimizer step, zero_grad, etc. here if needed
         # But usually, this is handled by the Trainer itself
-        print(args)
-        print(state)
-        print(control)
-        print(kwargs)
+        
         # If you need to access or modify model parameters, optimizer, etc.
         # You can access them using the `model` and `trainer` objects
         # For example: model.parameters(), trainer.optimizer, etc.
@@ -183,10 +180,9 @@ class ADMMCallback(TrainerCallback):
         # for group in kwargs['optimizer'].param_groups:
             # for param in group['params']:
                 # print(param)  # This will print the Tensor representing each parameter being optimized
-        self.update_X()
+        # self.update_X()
         # self.update_Z()
         # self.update_U()
-        pass
         
     def on_epoch_end(self, args, state, control, model=None, **kwargs):
         # This will be executed at the end of each epoch
@@ -255,29 +251,28 @@ class CustomTrainer(Trainer):
             # We don't use .loss here since the model may return tuples instead of ModelOutput.
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
 
-        if self.train_mask:
-            # print(f'loss nature {loss}')
-            admm_loss = 0
-            for name, mask in self.admm.ADMM_X.items():
-                admm_loss = self.admm.rho[name] / 2 * (self.admm.ADMM_X[name] - self.admm.ADMM_U[name]).norm()
-                admm_loss += admm_loss
-                # if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
-                    # print(f'loss:{self.admm.ADMM_U[name]}')
-            loss += admm_loss
-            print(f'loss admm {admm_loss}')
+        # print(f'loss nature {loss}')
+        admm_loss = 0
+        for name, mask in self.admm.ADMM_X.items():
+            admm_loss = self.admm.rho[name] / 2 * (self.admm.ADMM_X[name] - self.admm.ADMM_U[name]).norm()
+            admm_loss += admm_loss
+            # if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
+                # print(f'loss:{self.admm.ADMM_U[name]}')
+        loss += admm_loss
+        print(f'loss admm {admm_loss}')
         return (loss, outputs) if return_outputs else loss
 
-def switch(model):
-    params = model.named_parameters()
-    original_grad_settings = {name: param.requires_grad for name, param in params}
-
-    for name, module in model.named_parameters():
-        param.requires_grad = False
-        
+def add_masked_layers(model):
     for name, module in model.named_modules():
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
-            module.lora_mask.requires_grad = True
-
+            row, col = module.weight.shape
+            module.lora_mask = nn.Parameter(random_binary_tensor(row, col).to(module.weight.dtype))
+            module.lora_mask.requires_grad = False
+            module.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
+            module.prun_mask.requires_grad = False
+            # Modify forward method
+            module.forward = masked_forward_linear.__get__(module)
+            module._linear = masked_self_forward_linear.__get__(module)    
 
 trainer = CustomTrainer(
     model=model, 
@@ -286,8 +281,8 @@ trainer = CustomTrainer(
         per_device_train_batch_size=4, 
         gradient_accumulation_steps=4,
         warmup_steps=100, 
-        num_train_epochs=1,
-        max_steps = 3,
+        num_train_epochs=1,      
+        max_steps=10,           
         learning_rate=2e-4, 
         fp16=True,
         logging_steps=10, 
@@ -298,13 +293,5 @@ trainer = CustomTrainer(
 )
 trainer.admm = admm
 model.config.use_cache = False 
-trainer.train_mask = False
 trainer.train(resume_from_checkpoint = False)
-switch(model)
-print_trainable_parameters(model)
-trainer.train_mask = True
-trainer.args.max_steps = 100
-# trainer.train(resume_from_checkpoint = False)
-
-
 # model.save_pretrained("lora-muwa-1.3b-opt")
