@@ -272,7 +272,24 @@ def add_masked_layers(model):
             module.prun_mask.requires_grad = False
             # Modify forward method
             module.forward = masked_forward_linear.__get__(module)
-            module._linear = masked_self_forward_linear.__get__(module)    
+            module._linear = masked_self_forward_linear.__get__(module)   
+
+
+def custom_optimizer(model):
+    # Access the model's parameters
+    params = list(model.named_parameters())
+
+    # Identify the special_param
+    special_params = [param for name, param in params if 'lora_mask' in name]
+
+    # Define a parameter group with a custom learning rate for the special_param
+    param_groups = [
+        {'params': special_params, 'lr': 0.01}
+    ]
+
+    # Use AdamW for the special_param
+    optimizer = transformers.AdamW(param_groups)
+    return optimizer 
 
 trainer = CustomTrainer(
     model=model, 
