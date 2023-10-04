@@ -113,7 +113,7 @@ def add_masked_layers(model):
             row, col = module.weight.shape
             module.lora_mask = nn.Parameter(random_binary_tensor(row, col).to(module.weight.dtype))
             module.lora_mask.requires_grad = True
-            module.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
+            module.prun_mask = nn.Parameter(torch.rando_like(module.weight).to(module.weight.dtype))
             module.prun_mask.requires_grad = False
             # Modify forward method
             module.forward = masked_forward_linear.__get__(module)
@@ -174,7 +174,7 @@ class ADMMCallback(TrainerCallback):
         # For example: model.parameters(), trainer.optimizer, etc.
         # print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
         clip_mask(model)
-        
+
         # print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
         # for group in kwargs['optimizer'].param_groups:
             # for param in group['params']:
