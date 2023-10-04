@@ -257,8 +257,8 @@ class CustomTrainer(Trainer):
         for name, mask in self.admm.ADMM_X.items():
             admm_loss = self.admm.rho[name] / 2 * (self.admm.ADMM_X[name] - self.admm.ADMM_U[name]).norm()
             admm_loss += admm_loss
-            if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
-                print(f'loss:{self.admm.ADMM_U[name]}')
+            # if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
+                # print(f'loss:{self.admm.ADMM_U[name]}')
         loss += admm_loss
         # print(f'loss admm {admm_loss}')
         return (loss, outputs) if return_outputs else loss
