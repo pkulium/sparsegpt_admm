@@ -165,6 +165,22 @@ from transformers import TrainerCallback
 class ADMMCallback(TrainerCallback):
     def __init__(self):
         pass
+
+    def on_train_begin(self, args, state, control, model, **kwargs):
+        trainer = kwargs['trainer']
+
+        # Access the model's parameters
+        params = list(model.named_parameters())
+
+        # Identify the special_param
+        special_params = [param for name, param in params if 'lora_mask' in name]
+
+        # Remove the special_param from the default optimizer's parameter groups
+        trainer.optimizer.param_groups = [group for group in trainer.optimizer.param_groups if all(p not in group['params'] for p in special_params)]
+
+        # Add the custom optimizer for the special_param
+        special_optimizer = custom_optimizer(model)
+        trainer.optimizer.add_param_group(special_optimizer.param_groups[0])
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
         # This will be executed at the end of each training step
