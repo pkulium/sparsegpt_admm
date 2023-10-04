@@ -170,7 +170,10 @@ class ADMMCallback(TrainerCallback):
         # This will be executed at the end of each training step
         # You can perform optimizer step, zero_grad, etc. here if needed
         # But usually, this is handled by the Trainer itself
-        
+        print(args)
+        print(state)
+        print(control)
+        print(kwargs)
         # If you need to access or modify model parameters, optimizer, etc.
         # You can access them using the `model` and `trainer` objects
         # For example: model.parameters(), trainer.optimizer, etc.
@@ -301,7 +304,7 @@ switch(model)
 print_trainable_parameters(model)
 trainer.train_mask = True
 trainer.args.max_steps = 100
-trainer.train(resume_from_checkpoint = False)
+# trainer.train(resume_from_checkpoint = False)
 
 
 # model.save_pretrained("lora-muwa-1.3b-opt")
