@@ -265,9 +265,12 @@ class CustomTrainer(Trainer):
         return (loss, outputs) if return_outputs else loss
 
 def switch(model):
-    for name, module in model.state_dict().items():
-        if module.requires_grad:
-            module.requires_grad = False
+    params = model.named_parameters()
+    original_grad_settings = {name: param.requires_grad for name, param in params}
+
+    for name, module in model.named_parameters():
+        param.requires_grad = False
+        
     for name, module in model.named_modules():
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
             module.lora_mask.requires_grad = True
@@ -297,11 +300,6 @@ trainer.train(resume_from_checkpoint = False)
 switch(model)
 trainer.train_mask = True
 trainer.train(resume_from_checkpoint = False)
-
-
-
-
-
 
 
 # model.save_pretrained("lora-muwa-1.3b-opt")
