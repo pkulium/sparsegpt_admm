@@ -18,6 +18,16 @@ except ImportError:
 class Custom_Config:
     pass
 
+def get_n_m_sparse_matrix(w):
+    N, M = 2, 4
+    length = w.numel()
+    group = int(length / M)
+    w_tmp = w.t().detach().abs().reshape(group, M)
+    index = torch.argsort(w_tmp, dim=1)[:, :int(M - N)]
+    mask = torch.ones(w_tmp.shape, device=w_tmp.device)
+    mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape).t()
+    return w * mask, mask
+
 class ADMM:
     def __init__(self,config):
         self.ADMM_X = {}
@@ -43,7 +53,9 @@ class ADMM:
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
                 self.rho[name] = 0.01
                 self.ADMM_X[name] = module.lora_mask
-                self.ADMM_U[name] = module.prun_mask # add U 
+                # self.ADMM_U[name] = module.prun_mask # add U 
+                _, m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask))
+                self.ADMM_U[name] = m.data.to(module.weight.dtype)
                 self.ADMM_Z[name] = torch.Tensor(module.lora_mask.shape).cuda() # add Z
 
 def weight_pruning(config,weight,prune_ratio):
