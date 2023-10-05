@@ -290,6 +290,7 @@ def custom_optimizer(model):
 trainer = CustomTrainer(
     model=model, 
     train_dataset=data['train'],
+    eval_dataset=data['test'],
     args=transformers.TrainingArguments(
         per_device_train_batch_size=4, 
         gradient_accumulation_steps=4,
