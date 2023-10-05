@@ -180,7 +180,7 @@ class ADMMCallback(TrainerCallback):
 
         # Add the custom optimizer for the special_param
         special_optimizer = custom_optimizer(model)
-        trainer.optimizer.add_param_group(special_optimizer.param_groups[0])
+        optimizer.add_param_group(special_optimizer.param_groups[0])
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
         # This will be executed at the end of each training step
