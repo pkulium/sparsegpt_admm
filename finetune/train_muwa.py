@@ -167,7 +167,7 @@ class ADMMCallback(TrainerCallback):
         pass
 
     def on_train_begin(self, args, state, control, model, **kwargs):
-        trainer = kwargs['trainer']
+        optimizer = kwargs['optimizer']
 
         # Access the model's parameters
         params = list(model.named_parameters())
@@ -176,7 +176,7 @@ class ADMMCallback(TrainerCallback):
         special_params = [param for name, param in params if 'lora_mask' in name]
 
         # Remove the special_param from the default optimizer's parameter groups
-        trainer.optimizer.param_groups = [group for group in trainer.optimizer.param_groups if all(p not in group['params'] for p in special_params)]
+        optimizer.param_groups = [group for group in trainer.optimizer.param_groups if all(p not in group['params'] for p in special_params)]
 
         # Add the custom optimizer for the special_param
         special_optimizer = custom_optimizer(model)
