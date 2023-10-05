@@ -173,26 +173,11 @@ class ADMMCallback(TrainerCallback):
         optimizer.add_param_group(special_optimizer.param_groups[0])
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
-        # This will be executed at the end of each training step
-        # You can perform optimizer step, zero_grad, etc. here if needed
-        # But usually, this is handled by the Trainer itself
-        
-        # If you need to access or modify model parameters, optimizer, etc.
-        # You can access them using the `model` and `trainer` objects
-        # For example: model.parameters(), trainer.optimizer, etc.
-        # print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
-        # print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
-        # for group in kwargs['optimizer'].param_groups:
-            # for param in group['params']:
-                # print(param)  # This will print the Tensor representing each parameter being optimized
-        # self.update_X()
         clip_mask(model)
         self.update_Z(args, state, control, model=None, **kwargs)
         self.update_U(args, state, control, model=None, **kwargs)
         
     def on_epoch_end(self, args, state, control, model=None, **kwargs):
-        # This will be executed at the end of each epoch
-        # You can perform your X, Z, U updates here
         print('update_X')
         pass
     
