@@ -186,12 +186,12 @@ class ADMMCallback(TrainerCallback):
         pass
 
     def update_Z(self, args, state, control, model=None, **kwargs):
-        for name in kwargs['trainer'].admm.ADMM_Z:
-            kwargs['trainer'].admm.ADMM_Z[name] = kwargs['trainer'].admm.ADMM_X[name] - kwargs['trainer'].admm.ADMM_U[name]
+        for name in trainer.admm.ADMM_Z:
+            trainer.admm.ADMM_Z[name] = trainer.admm.ADMM_X[name] - trainer.admm.ADMM_U[name]
 
     def update_U(self, args, state, control, model=None, **kwargs):
-        for name in kwargs['trainer'].admm.ADMM_U:
-            kwargs['trainer'].admm.ADMM_Z[name] = kwargs['trainer'].admm.ADMM_U[name] + kwargs['trainer'].admm.ADMM_Z[name] - kwargs['trainer'].admm.ADMM_X[name]        
+        for name in trainer.admm.ADMM_U:
+            trainer.admm.ADMM_Z[name] = trainer.admm.ADMM_U[name] + trainer.admm.ADMM_Z[name] - trainer.admm.ADMM_X[name]        
 
 # # Initialize Z, U, and args as per your requirements
 from admm import Custom_Config, ADMM
