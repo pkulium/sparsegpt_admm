@@ -110,9 +110,9 @@ def get_n_m_sparse_matrix(w):
     mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape).t()
     return w * mask, mask
 
-from datautils import get_loaders
-from opt import find_layers
-from sparsegpt import SparseGPT
+from ..datautils import get_loaders
+from ..opt import find_layers
+from ..sparsegpt import SparseGPT
 @torch.no_grad()
 def prune_sparsegpt(args, model, tokenizer, dev, prune_n=0, prune_m=0):
     ## SparseGPT code available at: https://github.com/IST-DASLab/sparsegpt/tree/f5c25005a61f96a0933ca2f95705a963585aafaa
