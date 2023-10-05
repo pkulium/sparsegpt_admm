@@ -112,7 +112,7 @@ def add_masked_layers(model):
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
             row, col = module.weight.shape
             module.lora_mask = nn.Parameter(random_binary_tensor(row, col).to(module.weight.dtype))
-            module.lora_mask.requires_grad = True
+            module.lora_mask.requires_grad = False
             module.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
             module.prun_mask.requires_grad = False
             # Modify forward method
@@ -168,16 +168,6 @@ class ADMMCallback(TrainerCallback):
 
     def on_train_begin(self, args, state, control, model, **kwargs):
         optimizer = kwargs['optimizer']
-
-        # Access the model's parameters
-        params = list(model.named_parameters())
-
-        # Identify the special_param
-        special_params = [param for name, param in params if 'lora_mask' in name]
-
-        # Remove the special_param from the default optimizer's parameter groups
-        optimizer.param_groups = [group for group in optimizer.param_groups if all(p not in group['params'] for p in special_params)]
-
         # Add the custom optimizer for the special_param
         special_optimizer = custom_optimizer(model)
         optimizer.add_param_group(special_optimizer.param_groups[0])
@@ -282,7 +272,9 @@ class CustomTrainer(Trainer):
 def custom_optimizer(model):
     # Access the model's parameters
     params = list(model.named_parameters())
-
+    for name, param in params: 
+        if 'lora_mask' in name:
+            param.requires_grad = True
     # Identify the special_param
     special_params = [param for name, param in params if 'lora_mask' in name]
 
