@@ -168,7 +168,7 @@ class ADMMCallback(TrainerCallback):
 
     def on_train_begin(self, args, state, control, model, **kwargs):
         optimizer = kwargs['optimizer']
-
+        print(optimizer)
         # Access the model's parameters
         params = list(model.named_parameters())
 
