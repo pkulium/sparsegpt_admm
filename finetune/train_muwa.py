@@ -283,10 +283,6 @@ def custom_optimizer(model):
     # Access the model's parameters
     params = list(model.named_parameters())
 
-    for name, param in params:
-        if 'lora_mask' in name:
-            param.requires_grad = True
-
     # Identify the special_param
     special_params = [param for name, param in params if 'lora_mask' in name]
 
