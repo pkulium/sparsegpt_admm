@@ -181,12 +181,12 @@ class ADMMCallback(TrainerCallback):
         # You can access them using the `model` and `trainer` objects
         # For example: model.parameters(), trainer.optimizer, etc.
         # print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
-        clip_mask(model)
         # print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
         # for group in kwargs['optimizer'].param_groups:
             # for param in group['params']:
                 # print(param)  # This will print the Tensor representing each parameter being optimized
         # self.update_X()
+        clip_mask(model)
         self.update_Z(args, state, control, model=None, **kwargs)
         self.update_U(args, state, control, model=None, **kwargs)
         
