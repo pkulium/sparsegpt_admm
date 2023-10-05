@@ -21,7 +21,6 @@ from datasets import load_dataset
 data = load_dataset("databricks/databricks-dolly-15k")
 data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
 
- 
 for param in model.parameters():
     param.requires_grad = False    
     if param.ndim == 1:
@@ -188,12 +187,12 @@ class ADMMCallback(TrainerCallback):
     def update_Z(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
-                module.prun_mask.data = (module.lora_mask.data.clone() - trainer.admm.ADMM_U[name]).clamp_(0.0, 1.0).data
+                module.prun_mask.data = (module.lora_mask.data.clone() - trainer.admm.ADMM_U[name].data.clone()).clamp_(0.0, 1.0).data
 
     def update_U(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
-                trainer.admm.ADMM_U[name] = trainer.admm.ADMM_U[name] + module.prun_mask.data.clone() - module.lora_mask.data.clone()
+                trainer.admm.ADMM_U[name] = trainer.admm.ADMM_U[name].data.clone() + module.prun_mask.data.clone() - module.lora_mask.data.clone()
 
 # # Initialize Z, U, and args as per your requirements
 from admm import Custom_Config, ADMM
