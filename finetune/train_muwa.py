@@ -50,7 +50,10 @@ def print_trainable_parameters(model):
 import torch.nn.functional as F    
 from peft.utils.other import transpose
 def masked_self_forward_linear(self, input: torch.Tensor) -> torch.Tensor:
-    return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
+    if self.prun_masked:
+        return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
+    else:
+        return F.linear(input, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
 
 def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
     if self.active_adapter not in self.lora_A.keys():
@@ -71,10 +74,11 @@ def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
 
         result = self._linear(x)
         x = x.to(lora_A.weight.dtype)
-        # result += lora_B(lora_A(dropout(x))) * scaling
-        tmp = self.lora_mask * (lora_A.weight.transpose(0, 1) @ lora_B.weight.transpose(0, 1))
-        result += (dropout(x) @ tmp) * scaling
-
+        if self.lora_masked:
+            result += lora_B(lora_A(dropout(x))) * scaling
+        else:
+            tmp = self.lora_mask * (lora_A.weight.transpose(0, 1) @ lora_B.weight.transpose(0, 1))
+            result += (dropout(x) @ tmp) * scaling
     result = result.to(previous_dtype)
     return result
 
@@ -116,7 +120,9 @@ def add_masked_layers(model):
             module.prun_mask.requires_grad = False
             # Modify forward method
             module.forward = masked_forward_linear.__get__(module)
+            module.lora_masked = True 
             module._linear = masked_self_forward_linear.__get__(module)
+            module.prun_masked = True 
 
 from peft import LoraConfig, get_peft_model 
 
@@ -211,48 +217,6 @@ from torch import nn
 from transformers import Trainer
 
 class CustomTrainer(Trainer):
-
-    def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
-        """
-        Perform a training step on a batch of inputs.
-
-        Subclass and override to inject custom behavior.
-
-        Args:
-            model (`nn.Module`):
-                The model to train.
-            inputs (`Dict[str, Union[torch.Tensor, Any]]`):
-                The inputs and targets of the model.
-
-                The dictionary will be unpacked before being fed to the model. Most models expect the targets under the
-                argument `labels`. Check your model's documentation for all accepted arguments.
-
-        Return:
-            `torch.Tensor`: The tensor with training loss on this batch.
-        """
-        model.train()
-        inputs = self._prepare_inputs(inputs)
-        self.last_inputs = inputs
-        if is_sagemaker_mp_enabled():
-            loss_mb = smp_forward_backward(model, inputs, self.args.gradient_accumulation_steps)
-            return loss_mb.reduce_mean().detach().to(self.args.device)
-
-        with self.compute_loss_context_manager():
-            loss = self.compute_loss(model, inputs)
-
-        if self.args.n_gpu > 1:
-            loss = loss.mean()  # mean() to average on multi-gpu parallel training
-
-        if self.do_grad_scaling:
-            self.scaler.scale(loss).backward()
-        elif self.use_apex:
-            with amp.scale_loss(loss, self.optimizer) as scaled_loss:
-                scaled_loss.backward()
-        else:
-            self.accelerator.backward(loss)
-
-        return loss.detach() / self.args.gradient_accumulation_steps
-
     def compute_loss(self, model, inputs, return_outputs=False):
         """
         How the loss is computed by Trainer. By default, all models return the loss in the first element.
