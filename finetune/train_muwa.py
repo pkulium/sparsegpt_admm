@@ -187,8 +187,8 @@ class ADMMCallback(TrainerCallback):
             # for param in group['params']:
                 # print(param)  # This will print the Tensor representing each parameter being optimized
         # self.update_X()
-        # self.update_Z()
-        # self.update_U()
+        self.update_Z(args, state, control, model=None, **kwargs)
+        self.update_U(args, state, control, model=None, **kwargs)
         
     def on_epoch_end(self, args, state, control, model=None, **kwargs):
         # This will be executed at the end of each epoch
@@ -200,10 +200,10 @@ class ADMMCallback(TrainerCallback):
         print('update_X')
         pass
 
-    def update_Z(self):
+    def update_Z(self, args, state, control, model=None, **kwargs):
         pass
 
-    def update_U(self):
+    def update_U(self, args, state, control, model=None, **kwargs):
         pass
 
 # # Initialize Z, U, and args as per your requirements
