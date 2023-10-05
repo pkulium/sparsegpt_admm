@@ -187,11 +187,11 @@ class ADMMCallback(TrainerCallback):
 
     def update_Z(self, args, state, control, model=None, **kwargs):
         for name in trainer.admm.ADMM_Z:
-            trainer.admm.ADMM_Z[name] = trainer.admm.ADMM_X[name] - trainer.admm.ADMM_U[name]
+            trainer.admm.ADMM_Z[name] = torch.max(trainer.admm.ADMM_X[name] - trainer.admm.ADMM_U[name], 0)
 
     def update_U(self, args, state, control, model=None, **kwargs):
         for name in trainer.admm.ADMM_U:
-            trainer.admm.ADMM_Z[name] = trainer.admm.ADMM_U[name] + trainer.admm.ADMM_Z[name] - trainer.admm.ADMM_X[name]        
+            trainer.admm.ADMM_U[name] = trainer.admm.ADMM_U[name] + trainer.admm.ADMM_Z[name] - trainer.admm.ADMM_X[name]        
 
 # # Initialize Z, U, and args as per your requirements
 from admm import Custom_Config, ADMM
