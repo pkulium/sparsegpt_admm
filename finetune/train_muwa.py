@@ -186,12 +186,12 @@ class ADMMCallback(TrainerCallback):
         pass
 
     def update_Z(self, args, state, control, model=None, **kwargs):
-        for name, module in self.model.named_modules():
+        for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                 module.prun_mask = (module.lora_mask - trainer.admm.ADMM_Z[name]).clamp_(0.0, 1.0)
 
     def update_U(self, args, state, control, model=None, **kwargs):
-        for name, module in self.model.named_modules():
+        for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                 trainer.admm.ADMM_U[name] = trainer.admm.ADMM_U[name] + module.prun_mask - module.lora_mask
 
