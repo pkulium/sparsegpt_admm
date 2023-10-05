@@ -52,12 +52,8 @@ class ADMM:
         for name, module in self.model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
                 self.rho[name] = 0.01
-                # self.ADMM_X[name] = module.lora_mask
-                # self.ADMM_U[name] = module.prun_mask # add U 
                 _, m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask))
                 self.ADMM_U[name] = m.data.to(module.weight.dtype)
-                # self.ADMM_Z[name] = torch.Tensor(module.lora_mask.shape).cuda() # add Z
-                # self.ADMM_Z[name] = module.prun_mask
 
 def weight_pruning(config,weight,prune_ratio):
      """ 

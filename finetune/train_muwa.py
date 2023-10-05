@@ -194,7 +194,7 @@ class ADMMCallback(TrainerCallback):
         for name, module in self.model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                 trainer.admm.ADMM_U[name] = trainer.admm.ADMM_U[name] + module.prun_mask - module.lora_mask
-                
+
 # # Initialize Z, U, and args as per your requirements
 from admm import Custom_Config, ADMM
 config = Custom_Config()
@@ -246,11 +246,11 @@ class CustomTrainer(Trainer):
             # We don't use .loss here since the model may return tuples instead of ModelOutput.
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
 
-        print(f'loss nature {loss}')
+        # print(f'loss nature {loss}')
         admm_loss = 0
-        for name, mask in self.admm.ADMM_X.items():
-            admm_loss = self.admm.rho[name] / 2 * (self.admm.ADMM_X[name] - self.admm.ADMM_U[name]).norm()
-            admm_loss += admm_loss
+        for name, module in self.model.named_modules():
+            if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
+                admm_loss += self.admm.rho[name] / 2 * (module.lora_mask - self.admm.ADMM_U[name]).norm()
             # if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
                 # print(f'loss:{self.admm.ADMM_U[name]}')
         loss += admm_loss
