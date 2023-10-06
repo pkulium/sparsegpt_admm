@@ -5,6 +5,8 @@ from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 from peft import LoraConfig, get_peft_model 
 import transformers
 from datasets import load_dataset
+from sparsegpt import *
+from modelutils import *
 
 import os
 os.environ["WANDB_DISABLED"] = "true"
