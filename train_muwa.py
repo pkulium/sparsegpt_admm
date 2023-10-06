@@ -414,7 +414,7 @@ if __name__ == '__main__':
     model.seqlen = model.config.max_position_embeddings 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     dataloader, testloader = get_loaders(
-        'c4', nsamples=args.nsamples, seed=args.seed, model=model, seqlen=args.seqlen, tokenizer = tokenizer
+        'c4', nsamples=args.nsamples, seed=args.seed, model=model, seqlen=model.seqlen, tokenizer = tokenizer
     )
     opt_sequential(model, dataloader, dev=config.device)  
 
