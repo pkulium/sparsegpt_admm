@@ -121,7 +121,8 @@ def prune_sparsegpt(args, model, tokenizer, dev, prune_n=0, prune_m=0):
 
     use_cache = model.config.use_cache
     model.config.use_cache = False
-    layers = model.model.layers
+    # layers = model.model.layers
+    layers = model.model.model.decoder.layers
 
     if "model.embed_tokens" in model.hf_device_map:
         dev = model.hf_device_map["model.embed_tokens"]
