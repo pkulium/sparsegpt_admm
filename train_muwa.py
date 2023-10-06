@@ -170,6 +170,7 @@ def clip_mask(model, lower=0.0, upper=1.0):
             # param.data = m.to(param.dtype)
 
 from transformers import TrainerCallback
+from opt import *
 class ADMMCallback(TrainerCallback):
     def __init__(self):
         pass
@@ -208,7 +209,7 @@ class ADMMCallback(TrainerCallback):
             'c4', nsamples=config.nsamples, seed=config.seed, model=model, seqlen=model.seqlen
         )
         opt_sequential(model, dataloader, dev=config.device)  
-        
+
     def update_U(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 

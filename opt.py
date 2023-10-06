@@ -237,118 +237,118 @@ def opt_eval(model, testenc, dev, dataset: str, log_wandb: bool = False):
     model.config.use_cache = use_cache
 
 
-if __name__ == '__main__':
-    import argparse
-    from datautils import *
+# if __name__ == '__main__':
+#     import argparse
+#     from datautils import *
 
-    parser = argparse.ArgumentParser()
+#     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        'model', type=str, 
-        help='OPT model to load; pass `facebook/opt-X`.'
-    )
-    parser.add_argument(
-        'dataset', type=str, choices=['wikitext2', 'ptb', 'c4'],
-        help='Where to extract calibration data from.'
-    )
-    parser.add_argument(
-        '--seed',
-        type=int, default=0, help='Seed for sampling the calibration data.'
-    )
-    parser.add_argument(
-        '--nsamples', type=int, default=128,
-        help='Number of calibration data samples.'
-    )
-    parser.add_argument(
-        '--percdamp', type=float, default=.01,
-        help='Percent of the average Hessian diagonal to use for dampening.'
-    )
-    parser.add_argument(
-        '--sparsity', type=float, default=0,
-        help='Target sparsity'
-    )
-    parser.add_argument(
-        '--prunen', type=int, default=0,
-        help='N for N:M pruning.'
-    )
-    parser.add_argument(
-        '--prunem', type=int, default=0,
-        help='M for N:M pruning.'
-    )
-    parser.add_argument(
-        '--blocksize', type=int, default=128,
-        help='Blocksize to use for adaptive mask selection.'
-    )
-    parser.add_argument(
-        '--gmp', action='store_true',
-        help='Whether to run the GMP baseline.'
-    )
-    parser.add_argument(
-        '--wbits', type=int, default=16,
-        help='Whether to quantize as well.'
-    )
-    parser.add_argument(
-        '--minlayer', type=int, default=-1,
-        help='Prune all layers with id >= this.'
-    )
-    parser.add_argument(
-        '--maxlayer', type=int, default=1000,
-        help='Prune all layers with id < this.'
-    )
-    parser.add_argument(
-        '--prune_only', type=str, default='',
-        help='Prune only layers that contain this text.'
-    )
-    parser.add_argument(
-       '--invert', action='store_true', 
-       help='Invert subset.'
-    )
-    parser.add_argument(
-       '--save', type=str, default='',
-       help='Path to saved model.'
-    )
-    parser.add_argument(
-       '--log_wandb', action='store_true',
-       help='Whether to log to wandb.'
-    )
+#     parser.add_argument(
+#         'model', type=str, 
+#         help='OPT model to load; pass `facebook/opt-X`.'
+#     )
+#     parser.add_argument(
+#         'dataset', type=str, choices=['wikitext2', 'ptb', 'c4'],
+#         help='Where to extract calibration data from.'
+#     )
+#     parser.add_argument(
+#         '--seed',
+#         type=int, default=0, help='Seed for sampling the calibration data.'
+#     )
+#     parser.add_argument(
+#         '--nsamples', type=int, default=128,
+#         help='Number of calibration data samples.'
+#     )
+#     parser.add_argument(
+#         '--percdamp', type=float, default=.01,
+#         help='Percent of the average Hessian diagonal to use for dampening.'
+#     )
+#     parser.add_argument(
+#         '--sparsity', type=float, default=0,
+#         help='Target sparsity'
+#     )
+#     parser.add_argument(
+#         '--prunen', type=int, default=0,
+#         help='N for N:M pruning.'
+#     )
+#     parser.add_argument(
+#         '--prunem', type=int, default=0,
+#         help='M for N:M pruning.'
+#     )
+#     parser.add_argument(
+#         '--blocksize', type=int, default=128,
+#         help='Blocksize to use for adaptive mask selection.'
+#     )
+#     parser.add_argument(
+#         '--gmp', action='store_true',
+#         help='Whether to run the GMP baseline.'
+#     )
+#     parser.add_argument(
+#         '--wbits', type=int, default=16,
+#         help='Whether to quantize as well.'
+#     )
+#     parser.add_argument(
+#         '--minlayer', type=int, default=-1,
+#         help='Prune all layers with id >= this.'
+#     )
+#     parser.add_argument(
+#         '--maxlayer', type=int, default=1000,
+#         help='Prune all layers with id < this.'
+#     )
+#     parser.add_argument(
+#         '--prune_only', type=str, default='',
+#         help='Prune only layers that contain this text.'
+#     )
+#     parser.add_argument(
+#        '--invert', action='store_true', 
+#        help='Invert subset.'
+#     )
+#     parser.add_argument(
+#        '--save', type=str, default='',
+#        help='Path to saved model.'
+#     )
+#     parser.add_argument(
+#        '--log_wandb', action='store_true',
+#        help='Whether to log to wandb.'
+#     )
 
-    args = parser.parse_args()
+#     args = parser.parse_args()
 
-    # init W&B logging
-    if args.log_wandb:
-        assert has_wandb, "wandb not installed try `pip install wandb`"
-        wandb.init(config=args)
+#     # init W&B logging
+#     if args.log_wandb:
+#         assert has_wandb, "wandb not installed try `pip install wandb`"
+#         wandb.init(config=args)
 
-    model = get_opt(args.model)
-    model.eval()
+#     model = get_opt(args.model)
+#     model.eval()
 
-    dataloader, testloader = get_loaders(
-        args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=model.seqlen
-    )
+#     dataloader, testloader = get_loaders(
+#         args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=model.seqlen
+#     )
 
-    if (args.sparsity or args.prunen) and not args.gmp:
-        tick = time.time()
-        opt_sequential(model, dataloader, DEV)
-        for n, p in model.named_parameters():
-            print(n, torch.mean((p == 0).float()))
-            if 'fc2' in n:
-                break
-        print(time.time() - tick)
+#     if (args.sparsity or args.prunen) and not args.gmp:
+#         tick = time.time()
+#         opt_sequential(model, dataloader, DEV)
+#         for n, p in model.named_parameters():
+#             print(n, torch.mean((p == 0).float()))
+#             if 'fc2' in n:
+#                 break
+#         print(time.time() - tick)
 
-    ################################################################
-    print("*"*30)
-    sparsity_ratio = check_sparsity(model)
-    print(f"sparsity sanity check {sparsity_ratio:.4f}")
-    print("*"*30)
-    ################################################################
+#     ################################################################
+#     print("*"*30)
+#     sparsity_ratio = check_sparsity(model)
+#     print(f"sparsity sanity check {sparsity_ratio:.4f}")
+#     print("*"*30)
+#     ################################################################
 
-    # for dataset in ['wikitext2', 'ptb', 'c4']:
-    for dataset in ['wikitext2']:
-        dataloader, testloader = get_loaders(
-            dataset, seed=args.seed, model=args.model, seqlen=model.seqlen
-        )
-        print(dataset)
-        opt_eval(model, testloader, DEV, dataset, args.log_wandb)
+#     # for dataset in ['wikitext2', 'ptb', 'c4']:
+#     for dataset in ['wikitext2']:
+#         dataloader, testloader = get_loaders(
+#             dataset, seed=args.seed, model=args.model, seqlen=model.seqlen
+#         )
+#         print(dataset)
+#         opt_eval(model, testloader, DEV, dataset, args.log_wandb)
 
-    if args.save:
-        model.save_pretrained(args.save)
+#     if args.save:
+#         model.save_pretrained(args.save)
