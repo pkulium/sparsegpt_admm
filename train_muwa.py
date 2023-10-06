@@ -2,7 +2,7 @@ import os
 import torch
 import torch.nn as nn
 import bitsandbytes as bnb
-from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM, OPTForCausalLM, OPTForCausalLM
+from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM, OPTForCausalLM
 
 import os
 os.environ["WANDB_DISABLED"] = "true"
@@ -10,7 +10,7 @@ os.environ["WANDB_DISABLED"] = "true"
 model = OPTForCausalLM.from_pretrained(
     "facebook/opt-1.3b", 
     # load_in_8bit=True, 
-    cache_dir = 'llm_weights',
+    # cache_dir = 'llm_weights',
     device_map='auto',
 )
 model.seqlen = model.config.max_position_embeddings 
