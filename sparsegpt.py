@@ -8,7 +8,7 @@ import transformers
 from quant import *
 
 
-DEBUG = True
+DEBUG = False
 
 torch.backends.cuda.matmul.allow_tf32 = False
 torch.backends.cudnn.allow_tf32 = False
