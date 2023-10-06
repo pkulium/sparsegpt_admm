@@ -117,12 +117,11 @@ from sparsegpt import SparseGPT
 def prune_sparsegpt(args, model, tokenizer, dev, prune_n=0, prune_m=0):
     ## SparseGPT code available at: https://github.com/IST-DASLab/sparsegpt/tree/f5c25005a61f96a0933ca2f95705a963585aafaa
     print('Starting ...')
-    dataloader, _ = get_loaders("c4",nsamples=args.nsamples,seed=args.seed,seqlen=model.seqlen, tokenizer=args.tokenizer)
+    dataloader, _ = get_loaders("c4",nsamples=args.nsamples,seed=args.seed,seqlen=model.seqlen,tokenizer=tokenizer)
 
     use_cache = model.config.use_cache
     model.config.use_cache = False
-    # layers = model.model.layers
-    layers = model.model.model.decoder.layers
+    layers = model.model.layers
 
     if "model.embed_tokens" in model.hf_device_map:
         dev = model.hf_device_map["model.embed_tokens"]
@@ -294,7 +293,6 @@ class ADMMCallback(TrainerCallback):
         config.seed = 10
         config.nsamples = 10
         config.sparsity_ratio = 10
-        config.tokenizer = tokenizer
         prune_sparsegpt(config, model, tokenizer, dev='cuda:0', prune_n=None, prune_m=None)
 
     def update_U(self, args, state, control, model=None, **kwargs):
