@@ -10,6 +10,7 @@ os.environ["WANDB_DISABLED"] = "true"
 model = AutoModelForCausalLM.from_pretrained(
     "facebook/opt-1.3b", 
     # load_in_8bit=True, 
+    cache_dir=cache_dir = 'llm_weights',
     device_map='auto',
 )
 model.seqlen = model.config.max_position_embeddings 
