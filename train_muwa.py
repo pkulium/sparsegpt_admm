@@ -293,7 +293,7 @@ class ADMMCallback(TrainerCallback):
         config.seed = 10
         config.nsamples = 10
         config.sparsity_ratio = 10
-        prune_sparsegpt(config, model, tokenizer, device='cuda:0', prune_n=None, prune_m=None)
+        prune_sparsegpt(config, model, tokenizer, dev='cuda:0', prune_n=None, prune_m=None)
 
     def update_U(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
