@@ -94,8 +94,7 @@ def get_c4(nsamples, seed, seqlen, model, tokenizer):
 
     return trainloader, valenc
 
-def get_loaders(name, nsamples=128, seed=0, seqlen=2048, model=''):
-    tokenizer = get_tokenizer(model)
+def get_loaders(name, nsamples=128, seed=0, seqlen=2048, tokenizer = None):
     if 'wikitext2' in name:
         return get_wikitext2(nsamples, seed, seqlen, model, tokenizer)
     if 'ptb' in name:
