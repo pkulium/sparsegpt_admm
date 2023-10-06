@@ -12,7 +12,7 @@ model = AutoModelForCausalLM.from_pretrained(
     # load_in_8bit=True, 
     device_map='auto',
 )
-
+model.seqlen = model.config.max_position_embeddings 
 tokenizer = AutoTokenizer.from_pretrained("facebook/opt-1.3b")
 
  
