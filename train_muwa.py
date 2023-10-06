@@ -146,7 +146,7 @@ class ADMMCallback(TrainerCallback):
         dataloader, testloader = get_loaders(
             'c4', nsamples=config.nsamples, seed=config.seed, model=model, seqlen=model.seqlen, tokenizer = tokenizer
         )
-        opt_sequential(model.model, dataloader, dev=config.device, model0 = model)  
+        opt_sequential(model.model, dataloader, dev=config.device)  
 
     def update_U(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
@@ -221,7 +221,7 @@ def custom_optimizer(model):
     return optimizer 
 
 @torch.no_grad()
-def opt_sequential(model, dataloader, dev, model0):
+def opt_sequential(model, dataloader, dev):
     print('Starting ...')
 
     use_cache = model.config.use_cache
@@ -413,6 +413,10 @@ if __name__ == '__main__':
     )
     model.seqlen = model.config.max_position_embeddings 
     tokenizer = AutoTokenizer.from_pretrained("facebook/opt-1.3b")
+    dataloader, testloader = get_loaders(
+            'c4', nsamples=config.nsamples, seed=config.seed, model=model, seqlen=model.seqlen, tokenizer = tokenizer
+    )
+    opt_sequential(model, dataloader, dev=config.device)  
 
     data = load_dataset("databricks/databricks-dolly-15k")
     data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
