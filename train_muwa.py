@@ -209,7 +209,7 @@ class ADMMCallback(TrainerCallback):
         dataloader, testloader = get_loaders(
             'c4', nsamples=config.nsamples, seed=config.seed, model=model, seqlen=model.seqlen, tokenizer = tokenizer
         )
-        opt_sequential(model, dataloader, dev=config.device)  
+        opt_sequential(model.model, dataloader, dev=config.device)  
 
     def update_U(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
