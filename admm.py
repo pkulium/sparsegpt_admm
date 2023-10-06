@@ -42,7 +42,7 @@ class ADMM:
         """
         Args:
             config: configuration file that has settings for prune ratios, rhos
-        called by ADMM constructor. config should be a .yaml file          
+        called by ADMM constructor. config should be an .yaml file          
 
         """          
         self.prune_ratios = config.prune_ratios
