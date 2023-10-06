@@ -7,7 +7,7 @@ from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 import os
 os.environ["WANDB_DISABLED"] = "true"
 
-model = AutoModelForCausalLM.from_pretrained(
+model = OPTForCausalLM.from_pretrained(
     "facebook/opt-1.3b", 
     # load_in_8bit=True, 
     cache_dir = 'llm_weights',
