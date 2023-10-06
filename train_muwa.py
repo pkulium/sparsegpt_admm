@@ -1,7 +1,6 @@
 import os
 import torch
 import torch.nn as nn
-import bitsandbytes as bnb
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 from peft import LoraConfig, get_peft_model 
 import transformers
@@ -229,12 +228,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        'model', type=str, 
+        '--model', type=str, 
         default = 'facebook/opt-1.3b',
         help='OPT model to load; pass `facebook/opt-X`.'
     )
     parser.add_argument(
-        'dataset', type=str, choices=['wikitext2', 'ptb', 'c4'],
+        '--dataset', type=str, choices=['wikitext2', 'ptb', 'c4'],
         default = 'c4',
         help='Where to extract calibration data from.'
     )
