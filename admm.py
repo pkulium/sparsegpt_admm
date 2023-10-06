@@ -53,7 +53,7 @@ class ADMM:
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
                 self.rho[name] = 0.01
                 _, m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask))
-                self.ADMM_U[name] = m.data.to(dtype = module.weight.dtype, device = module.device)
+                self.ADMM_U[name] = m.data.to(dtype = module.weight.dtype, device = module.prun_mask.device)
                 self.ADMM_U[name].requires_grad = False
 
 
