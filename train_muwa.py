@@ -34,6 +34,7 @@ class CastOutputToFloat(nn.Sequential):
   def forward(self, x): return super().forward(x).to(torch.float32)
 model.lm_head = CastOutputToFloat(model.lm_head)
 # base_model.model.model.decoder.layers.0.self_attn.v_proj
+
 def print_trainable_parameters(model):
     """
     Prints the number of trainable parameters in the model.
