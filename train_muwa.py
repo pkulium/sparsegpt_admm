@@ -112,7 +112,6 @@ def get_n_m_sparse_matrix(w):
     mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape).t()
     return w * mask, mask
 
-from lib.prune import prune_sparsegpt
 
 def add_masked_layers(model):
     for name, module in model.named_modules():
@@ -204,8 +203,12 @@ class ADMMCallback(TrainerCallback):
         config.seed = 10
         config.nsamples = 10
         config.sparsity_ratio = 10
-        prune_sparsegpt(config, model, tokenizer, dev='cuda:0', prune_n=None, prune_m=None)
-
+        config.device = 'cuda:0'
+        dataloader, testloader = get_loaders(
+            'c4', nsamples=config.nsamples, seed=config.seed, model=model, seqlen=model.seqlen
+        )
+        opt_sequential(model, dataloader, dev=config.device)  
+        
     def update_U(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
