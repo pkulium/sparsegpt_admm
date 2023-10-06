@@ -2,7 +2,7 @@ import os
 import torch
 import torch.nn as nn
 import bitsandbytes as bnb
-from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM, OPTForCausalLM
 
 import os
 os.environ["WANDB_DISABLED"] = "true"
