@@ -403,6 +403,10 @@ if __name__ == '__main__':
        '--log_wandb', action='store_true',
        help='Whether to log to wandb.'
     )
+    parser.add_argument(
+       '--device', type=str, default='cuda:0',
+       help='Path to saved model.'
+    )
     args = parser.parse_args()
 
     model = AutoModelForCausalLM.from_pretrained(
@@ -411,12 +415,14 @@ if __name__ == '__main__':
         cache_dir = 'llm_weights',
         device_map='auto',
     )
+    model.eval()
     model.seqlen = model.config.max_position_embeddings 
+
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     dataloader, testloader = get_loaders(
         'c4', nsamples=args.nsamples, seed=args.seed, model=model, seqlen=model.seqlen, tokenizer = tokenizer
     )
-    opt_sequential(model, dataloader, dev=config.device)  
+    opt_sequential(model, dataloader, dev=args.device)  
 
     data = load_dataset("databricks/databricks-dolly-15k")
     data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
