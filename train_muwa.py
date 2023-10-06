@@ -7,6 +7,7 @@ import transformers
 from datasets import load_dataset
 from sparsegpt import *
 from modelutils import *
+from datautils import *
 
 import os
 os.environ["WANDB_DISABLED"] = "true"
@@ -110,7 +111,6 @@ def clip_mask(model, lower=0.0, upper=1.0):
             # param.data = m.to(param.dtype)
 
 from transformers import TrainerCallback
-from datautils import get_loaders
 class ADMMCallback(TrainerCallback):
     def __init__(self):
         pass
@@ -155,9 +155,8 @@ class ADMMCallback(TrainerCallback):
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                 trainer.admm.ADMM_U[name] = trainer.admm.ADMM_U[name].data.clone() + module.prun_mask.data.clone() - module.lora_mask.data.clone()
         
-from torch import nn
-from transformers import Trainer
 
+from transformers import Trainer
 class CustomTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
         """
