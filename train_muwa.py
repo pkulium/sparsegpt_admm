@@ -205,7 +205,7 @@ class ADMMCallback(TrainerCallback):
         config.sparsity_ratio = 10
         config.device = 'cuda:0'
         dataloader, testloader = get_loaders(
-            'c4', nsamples=config.nsamples, seed=config.seed, model=model, seqlen=model.seqlen
+            'c4', nsamples=config.nsamples, seed=config.seed, model=model, seqlen=model.seqlen, tokenizer = tokenizer
         )
         opt_sequential(model, dataloader, dev=config.device)  
 
