@@ -109,7 +109,8 @@ if __name__ == '__main__':
     model.enable_input_require_grads()
 
     class CastOutputToFloat(nn.Sequential):
-    def forward(self, x): return super().forward(x).to(torch.float32)
+        def forward(self, x): 
+            return super().forward(x).to(torch.float32)
     model.lm_head = CastOutputToFloat(model.lm_head)
 
     def print_trainable_parameters(model):
