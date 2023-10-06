@@ -7,14 +7,19 @@ from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM, OPTFor
 import os
 os.environ["WANDB_DISABLED"] = "true"
 
-model = OPTForCausalLM.from_pretrained(
-    "facebook/opt-1.3b", 
-    # load_in_8bit=True, 
-    cache_dir = 'llm_weights',
-    device_map='auto',
-)
-model.seqlen = model.config.max_position_embeddings 
-tokenizer = AutoTokenizer.from_pretrained("facebook/opt-1.3b")
+# model = AutoTokenizer.from_pretrained(
+#     "facebook/opt-1.3b", 
+#     # load_in_8bit=True, 
+#     cache_dir = 'llm_weights',
+#     device_map='auto',
+# )
+# model.seqlen = model.config.max_position_embeddings 
+
+from opt import get_opt
+model_name = "facebook/opt-1.3b"
+model = get_opt(model_name)
+model.eval()
+tokenizer = AutoTokenizer.from_pretrained(model_name)
 
  
 import transformers
