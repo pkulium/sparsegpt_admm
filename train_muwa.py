@@ -426,7 +426,7 @@ if __name__ == '__main__':
             # num_train_epochs=1,      
             max_steps=20,           
             learning_rate=2e-4, 
-            fp16=True,
+            # fp16=True,
             logging_steps=10, 
             output_dir='outputs'
         ),
