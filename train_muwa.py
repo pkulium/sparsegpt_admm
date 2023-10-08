@@ -262,6 +262,7 @@ def pgd_prun_mask(module, module_name, admm):
     module.prun_mask.requires_grad = True
 
     inputs = module.last_input
+    inputs = inputs.to(model.weight.dtype)
     targets = module.last_expected_output
 
     from torch.utils.data import TensorDataset, DataLoader
@@ -280,7 +281,7 @@ def pgd_prun_mask(module, module_name, admm):
         mask_optimizer.zero_grad()
         outputs = model.forward(inputs)
         loss = criterion(outputs, targets)  # Compute the loss
-        l1_reg = rho / 2 * (model.prun_mask - model.lora_mask + admm.ADMM_U[module_name]).norm()
+        l1_reg = rho / 2 * model.prun_mask - model.lora_mask + admm.ADMM_U[module_name]).norm()
         loss += l1_reg
         loss.backward()
         mask_optimizer.step()
