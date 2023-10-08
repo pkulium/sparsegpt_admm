@@ -265,6 +265,7 @@ def pgd_prun_mask(module, module_name, admm):
     inputs = module.last_input
     inputs = inputs.to(model.weight.dtype)
     targets = module.last_expected_output
+    targets = targets.to(model.weight.dtype)
 
     from torch.utils.data import TensorDataset, DataLoader
     # dataset = TensorDataset(input, output)
