@@ -92,7 +92,7 @@ def add_masked_layers(model):
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
             row, col = module.weight.shape
             module.lora_mask = nn.Parameter(random_binary_tensor(row, col).to(module.weight.dtype))
-            module.lora_mask.requires_grad = True
+            module.lora_mask.requires_grad = False
             module.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
             module.prun_mask.requires_grad = False
             # Modify forward method
@@ -417,6 +417,7 @@ if __name__ == '__main__':
         device_map='auto',
     )
     tokenizer = AutoTokenizer.from_pretrained(args.model)
+
     # model.eval()
     # model.seqlen = model.config.max_position_embeddings 
     # dataloader, testloader = get_loaders(
