@@ -261,12 +261,12 @@ def pgd_prun_mask(module, admm):
     model.prun_masked = True
     module.prun_mask.requires_grad = True
 
-    input = module.last_input
-    output = module.last_expected_output
+    inputs = module.last_input
+    targets = module.last_expected_output
 
     from torch.utils.data import TensorDataset, DataLoader
-    dataset = TensorDataset(input, output)
-    train_loader = DataLoader(dataset, batch_size=1, shuffle=True)
+    # dataset = TensorDataset(input, output)
+    # train_loader = DataLoader(dataset, batch_size=1, shuffle=True)
     criterion = nn.MSELoss()  
     mask_optimizer = torch.optim.AdamW([model.prun_mask], lr=0.001)
     rho = 0.01  # You can adjust tsshis value to change the strength of the regularization
@@ -274,18 +274,17 @@ def pgd_prun_mask(module, admm):
     device = module.device
 
     for epoch in range(total_epoch):
-        for i, (inputs, targets) in enumerate(train_loader):
-            inputs, targets = inputs.to(device), targets.to(device)
-
-            # step 2: calculate loss and update the mask values
-            mask_optimizer.zero_grad()
-            outputs = model.forward(inputs)
-            loss = criterion(outputs, targets)  # Compute the loss
-            l1_reg = rho / 2 * torch.sum([(model.prun_mask[name] - model.lora_mask[name] + admm.ADMM_U[name]).norm() for name in model.prun_mask])
-            loss += l1_reg
-            loss.backward()
-            mask_optimizer.step()
-            clip_mask(model)
+        # for i, (inputs, targets) in enumerate(train_loader):
+        # inputs, targets = inputs.to(device), targets.to(device)
+        # step 2: calculate loss and update the mask values
+        mask_optimizer.zero_grad()
+        outputs = model.forward(inputs)
+        loss = criterion(outputs, targets)  # Compute the loss
+        l1_reg = rho / 2 * torch.sum([(model.prun_mask[name] - model.lora_mask[name] + admm.ADMM_U[name]).norm() for name in model.prun_mask])
+        loss += l1_reg
+        loss.backward()
+        mask_optimizer.step()
+        clip_mask(model)
         if epoch == 0 or epoch == total_epoch - 1:
             print(f"Epoch {epoch}, Loss: {loss.item()}")
         return 
