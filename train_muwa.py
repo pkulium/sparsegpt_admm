@@ -92,7 +92,7 @@ class CustomTrainer(Trainer):
             # We don't use .loss here since the model may return tuples instead of ModelOutput.
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
 
-        print(f'loss nature {loss}')
+        # print(f'loss nature {loss}')
         admm_loss = 0
         for name, module in self.model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
@@ -100,7 +100,7 @@ class CustomTrainer(Trainer):
             # if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
                 # print(f'loss:{self.admm.ADMM_U[name]}')
         loss += admm_loss
-        print(f'loss admm {admm_loss}')
+        # print(f'loss admm {admm_loss}')
         return (loss, outputs) if return_outputs else loss
 
 class Custom_Config:
