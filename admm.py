@@ -42,7 +42,7 @@ class ADMM:
         """
         Args:
             config: configuration file that has settings for prune ratios, rhos
-        called by ADMM constructor. config should be an .yaml file          
+        called by ADMM constructor. config should be a .yaml file          
 
         """          
         self.prune_ratios = config.prune_ratios
@@ -53,9 +53,8 @@ class ADMM:
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
                 self.rho[name] = 0.01
                 _, m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask))
-                self.ADMM_U[name] = m.data.to(dtype = module.weight.dtype)
+                self.ADMM_U[name] = m.data.to(module.weight.dtype)
                 self.ADMM_U[name].requires_grad = False
-
 
 def weight_pruning(config,weight,prune_ratio):
      """ 
@@ -363,4 +362,3 @@ def masking(config):
             masks[name] = above_threshold
             
     config.masks = masks
-

@@ -413,7 +413,6 @@ if __name__ == '__main__':
     model = AutoModelForCausalLM.from_pretrained(
         "facebook/opt-1.3b", 
         # load_in_8bit=True, 
-        cache_dir = 'llm_weights',
         device_map='auto',
     )
     tokenizer = AutoTokenizer.from_pretrained(args.model)
