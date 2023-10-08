@@ -267,10 +267,10 @@ def pgd_prun_mask(module, module_name, admm):
 
         inputs = module.last_input.clone()
         module.last_input = None
-        # inputs = inputs.to(model.weight.dtype)
+        inputs = inputs.to(model.weight.dtype)
         targets = module.last_expected_output.clone()
         module.last_expected_output = None
-        # targets = targets.to(model.weight.dtype)
+        targets = targets.to(model.weight.dtype)
         lora_mask = module.lora_mask.clone()
 
 
