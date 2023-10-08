@@ -32,8 +32,8 @@ class ADMMCallback(TrainerCallback):
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
         clip_mask(model)
-        # self.update_Z(args, state, control, model, **kwargs)
-        # self.update_U(args, state, control, model, **kwargs)
+        self.update_Z(args, state, control, model, **kwargs)
+        self.update_U(args, state, control, model, **kwargs)
         
     def on_epoch_end(self, args, state, control, model=None, **kwargs):
         print('update_X')
@@ -46,7 +46,10 @@ class ADMMCallback(TrainerCallback):
     def update_Z(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
-                module.prun_mask.data = (module.lora_mask.data.clone() - trainer.admm.ADMM_U[name].data.clone()).clamp_(0.0, 1.0).data
+                updated_prun_mask = (module.weight.data, module.prun_mask.data, module.last_input, module.last_expected_output)
+                module.last_input = None                
+                module.last_expected_output = None
+                module.prun_mask.data = updated_prun_mask
 
     def update_U(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
