@@ -32,8 +32,8 @@ class ADMMCallback(TrainerCallback):
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
         clip_mask(model)
-        # self.update_Z(args, state, control, model, **kwargs)
-        # self.update_U(args, state, control, model, **kwargs)
+        self.update_Z(args, state, control, model, **kwargs)
+        self.update_U(args, state, control, model, **kwargs)
         
     def on_epoch_end(self, args, state, control, model=None, **kwargs):
         print('update_X')
@@ -46,7 +46,8 @@ class ADMMCallback(TrainerCallback):
     def update_Z(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
-                updated_prun_mask = (module.weight.data, module.prun_mask.data, module.last_input, module.last_expected_output)
+                 # apply mask from pgd
+                updated_prun_mask = pgd_prun_mask(module, args.trainer.admm)
                 module.last_input = None                
                 module.last_expected_output = None
                 module.prun_mask.data = updated_prun_mask
@@ -249,6 +250,44 @@ def custom_optimizer(model):
     # Use AdamW for the special_param
     optimizer = transformers.AdamW(param_groups)
     return optimizer 
+import copy
+def pgd_prun_mask(module, admm):
+     # apply mask from pgd
+    model = copy.deepcopy(module)
+    model.disable_adapters = True
+    model.eval()
+    model.lora_masked = False
+    model.prun_masked = True
+    module.prun_mask.requires_grad = True
+
+    input = module.last_input
+    output = module.last_expected_output
+
+    from torch.utils.data import TensorDataset, DataLoader
+    dataset = TensorDataset(input, output)
+    train_loader = DataLoader(dataset, batch_size=1, shuffle=True)
+    criterion = nn.MSELoss()  
+    mask_optimizer = torch.optim.AdamW([model.prun_mask], lr=0.001)
+    rho = 0.01  # You can adjust tsshis value to change the strength of the regularization
+    total_epoch = 1
+    device = module.device
+
+    for epoch in range(total_epoch):
+        for i, (inputs, targets) in enumerate(train_loader):
+            inputs, targets = inputs.to(device), targets.to(device)
+
+            # step 2: calculate loss and update the mask values
+            mask_optimizer.zero_grad()
+            outputs = model.forward(inputs)
+            loss = criterion(outputs, targets)  # Compute the loss
+            l1_reg = rho / 2 * torch.sum([(model.prun_mask[name] - model.lora_mask[name] + admm.ADMM_U[name]).norm() for name in model.prun_mask])
+            loss += l1_reg
+            loss.backward()
+            mask_optimizer.step()
+            clip_mask(model)
+        if epoch == 0 or epoch == total_epoch - 1:
+            print(f"Epoch {epoch}, Loss: {loss.item()}")
+        return 
 
 if __name__ == '__main__':
     import argparse
