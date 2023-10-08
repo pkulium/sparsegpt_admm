@@ -263,6 +263,7 @@ def pgd_prun_mask(module, module_name, admm):
                 param.clamp_(lower, upper)
     model = nn.Linear(module.in_features, module.in_features, True)
     model.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
+    model.eval()
     with torch.no_grad():
         model.weight.data = module.weight.data.clone()
         model.bias.data = module.bias.data.clone()
@@ -280,7 +281,7 @@ def pgd_prun_mask(module, module_name, admm):
 
 
     criterion = nn.MSELoss()  
-    mask_optimizer = torch.optim.AdamW([model.prun_mask], lr=0.001)
+    mask_optimizer = torch.optim.AdamW([model.prun_mask], lr=0.01)
     rho = 0.01  # You can adjust tsshis value to change the strength of the regularization
     total_epoch = 1
     device = 'cuda:0'
