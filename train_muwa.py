@@ -47,7 +47,7 @@ class ADMMCallback(TrainerCallback):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                  # apply mask from pgd
-                updated_prun_mask = pgd_prun_mask(module, admm)
+                updated_prun_mask = pgd_prun_mask(module, name, admm)
                 module.last_input = None                
                 module.last_expected_output = None
                 module.prun_mask.data = updated_prun_mask
@@ -251,7 +251,7 @@ def custom_optimizer(model):
     optimizer = transformers.AdamW(param_groups)
     return optimizer 
 import copy
-def pgd_prun_mask(module, admm):
+def pgd_prun_mask(module, module_name, admm):
      # apply mask from pgd
     # model = copy.deepcopy(module)
     model = module
@@ -280,7 +280,7 @@ def pgd_prun_mask(module, admm):
         mask_optimizer.zero_grad()
         outputs = model.forward(inputs)
         loss = criterion(outputs, targets)  # Compute the loss
-        l1_reg = rho / 2 * torch.sum([(model.prun_mask[name] - model.lora_mask[name] + admm.ADMM_U[name]).norm() for name in model.prun_mask])
+        l1_reg = rho / 2 * (model.prun_mask - model.lora_mask + admm.ADMM_U[module_name]).norm()
         loss += l1_reg
         loss.backward()
         mask_optimizer.step()
