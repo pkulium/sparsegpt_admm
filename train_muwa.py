@@ -253,7 +253,8 @@ def custom_optimizer(model):
 import copy
 def pgd_prun_mask(module, admm):
      # apply mask from pgd
-    model = copy.deepcopy(module)
+    # model = copy.deepcopy(module)
+    model = module
     model.disable_adapters = True
     model.eval()
     model.lora_masked = False
