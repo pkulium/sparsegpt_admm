@@ -259,9 +259,9 @@ def pgd_prun_mask(module, module_name, admm):
     model = nn.Linear(module.in_features, module.in_features, True)
     model.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
     with torch.no_grad():
-        model.weight.data = module.weight.data.copy()
-        model.bias.data = module.bias.data.copy()
-        model.prun_mask.data = module.prun_mask.data.copy()
+        model.weight.data = module.weight.data.clone()
+        model.bias.data = module.bias.data.clone()
+        model.prun_mask.data = module.prun_mask.data.clone()
         model.prun_mask.requires_grad = True
         model._linear = pgd_prun_mask_forward.__get__(model)
 
