@@ -214,11 +214,11 @@ def custom_optimizer(model):
 
     # Define a parameter group with a custom learning rate for the special_param
     param_groups = [
-        {'params': special_params, 'lr': 0.1}
+        {'params': special_params, 'lr': 0.01}
     ]
 
     # Use AdamW for the special_param
-    optimizer = transformers.AdamW(param_groups)
+    optimizer = transformers.Adam(param_groups)
     return optimizer 
 
 @torch.no_grad()
