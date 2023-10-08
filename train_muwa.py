@@ -5,9 +5,13 @@ from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 from peft import LoraConfig, get_peft_model 
 import transformers
 from datasets import load_dataset
-from sparsegpt import *
-from modelutils import *
-from datautils import *
+ import torch.nn.functional as F    
+from peft.utils.other import transpose
+from transformers import TrainerCallback
+from admm import Custom_Config, ADMM
+from torch import nn
+from transformers import Trainer
+
 
 import os
 os.environ["WANDB_DISABLED"] = "true"
@@ -16,101 +20,6 @@ class CastOutputToFloat(nn.Sequential):
     def forward(self, x): 
         return super().forward(x).to(torch.float32)
 
-def print_trainable_parameters(model):
-    """
-    Prints the number of trainable parameters in the model.
-    """
-    trainable_params = 0
-    all_param = 0
-    for _, param in model.named_parameters():
-        all_param += param.numel()
-        if param.requires_grad:
-            trainable_params += param.numel()            
-    print(
-        f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}"
-    )
-
-import torch.nn.functional as F    
-from peft.utils.other import transpose
-# modify forward for linear layer
-def masked_self_forward_linear(self, input: torch.Tensor) -> torch.Tensor:
-    if self.prun_masked:
-        return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
-    else:
-        return F.linear(input, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
-
-# modify forward for lora layer
-def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
-    if self.active_adapter not in self.lora_A.keys():
-        return self._linear(x)
-
-    previous_dtype = x.dtype
-    if self.disable_adapters:
-        if (self.r[self.active_adapter] > 0) and self.merged:
-            self.unmerge()
-        result = self._linear(x)
-    elif (self.r[self.active_adapter] == 0) or self.merged:
-        result = self._linear(x)
-    else:
-        lora_A = self.lora_A[self.active_adapter]
-        lora_B = self.lora_B[self.active_adapter]
-        dropout = self.lora_dropout[self.active_adapter]
-        scaling = self.scaling[self.active_adapter]
-
-        result = self._linear(x)
-        x = x.to(lora_A.weight.dtype)
-        if not self.lora_masked:
-            result += lora_B(lora_A(dropout(x))) * scaling
-        else:
-            tmp = self.lora_mask * (lora_A.weight.transpose(0, 1) @ lora_B.weight.transpose(0, 1))
-            result += (dropout(x) @ tmp) * scaling
-    result = result.to(previous_dtype)
-    return result
-
-def random_binary_tensor(n, m):
-    # Calculate the number of ones needed
-    num_ones = (n * m) // 2
-    tensor = torch.zeros((n, m), dtype=torch.int)
-    indices = torch.arange(n * m)
-    # Shuffle the indices and select the first num_ones indices to set to 1
-    ones_indices = indices[torch.randperm(n * m)][:num_ones]
-    tensor.view(-1)[ones_indices] = 1
-    return tensor
-
-def get_n_m_sparse_matrix(w):
-    N, M = 2, 4
-    length = w.numel()
-    group = int(length / M)
-    w_tmp = w.t().detach().abs().reshape(group, M)
-    index = torch.argsort(w_tmp, dim=1)[:, :int(M - N)]
-    mask = torch.ones(w_tmp.shape, device=w_tmp.device)
-    mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape).t()
-    return w * mask, mask
-
-def add_masked_layers(model):
-    for name, module in model.named_modules():
-        if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
-            row, col = module.weight.shape
-            module.lora_mask = nn.Parameter(random_binary_tensor(row, col).to(module.weight.dtype))
-            module.lora_mask.requires_grad = False
-            module.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
-            module.prun_mask.requires_grad = False
-            # Modify forward method
-            module.forward = masked_forward_linear.__get__(module)
-            module.lora_masked = True 
-            module._linear = masked_self_forward_linear.__get__(module)
-            module.prun_masked = True 
-
-
-def clip_mask(model, lower=0.0, upper=1.0):
-    params = [param for name, param in model.named_parameters() if 'lora_mask' in name]
-    with torch.no_grad():
-        for param in params:
-            param.clamp_(lower, upper)
-            # w, m = get_n_m_sparse_matrix(param)
-            # param.data = m.to(param.dtype)
-
-from transformers import TrainerCallback
 class ADMMCallback(TrainerCallback):
     def __init__(self):
         pass
@@ -137,26 +46,13 @@ class ADMMCallback(TrainerCallback):
     def update_Z(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
-                module.lora_masked = False 
-                module.prun_masked = False
-        config = Custom_Config()
-        config.nsamples = 10
-        config.seed = 10
-        config.nsamples = 10
-        config.sparsity_ratio = 10
-        config.device = 'cuda:0'
-        # dataloader, testloader = get_loaders(
-        #     'c4', nsamples=config.nsamples, seed=config.seed, model=model, seqlen=model.seqlen, tokenizer = tokenizer
-        # )
-        # opt_sequential(model.model, dataloader, dev=config.device)  
+                module.prun_mask.data = (module.lora_mask.data.clone() - trainer.admm.ADMM_U[name].data.clone()).clamp_(0.0, 1.0).data
 
     def update_U(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                 trainer.admm.ADMM_U[name] = trainer.admm.ADMM_U[name].data.clone() + module.prun_mask.data.clone() - module.lora_mask.data.clone()
-        
 
-from transformers import Trainer
 class CustomTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
         """
@@ -196,12 +92,140 @@ class CustomTrainer(Trainer):
         admm_loss = 0
         for name, module in self.model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
-                admm_loss += self.admm.rho[name] / 2 * (module.lora_mask.data - self.admm.ADMM_U[name]).norm()
+                admm_loss += self.admm.rho[name] / 2 * (module.lora_mask - self.admm.ADMM_U[name]).norm()
             # if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
                 # print(f'loss:{self.admm.ADMM_U[name]}')
         loss += admm_loss
         print(f'loss admm {admm_loss}')
         return (loss, outputs) if return_outputs else loss
+
+class Custom_Config:
+    pass
+
+class ADMM:
+    def __init__(self,config):
+        self.ADMM_X = {}
+        self.ADMM_U = {}
+        self.ADMM_Z = {}
+        self.rho = {}
+        self.model = config.model
+        self.prune_ratios = None    #code name -> prune ratio
+        self.init(config)
+        
+    def init(self,config):
+        """
+        Args:
+            config: configuration file that has settings for prune ratios, rhos
+        called by ADMM constructor. config should be a .yaml file          
+
+        """          
+        self.prune_ratios = config.prune_ratios
+        self.rhos = config.rhos
+        
+        self.sparsity_type = config.sparsity_type
+        for name, module in self.model.named_modules():
+            if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
+                self.rho[name] = 0.01
+                _, m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask))
+                self.ADMM_U[name] = m.data.to(module.weight.dtype)
+                self.ADMM_U[name].requires_grad = False
+                
+def print_trainable_parameters(model):
+    """
+    Prints the number of trainable parameters in the model.
+    """
+    trainable_params = 0
+    all_param = 0
+    for _, param in model.named_parameters():
+        all_param += param.numel()
+        if param.requires_grad:
+            trainable_params += param.numel()            
+    print(
+        f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}"
+    )
+
+def masked_self_forward_linear(self, input: torch.Tensor) -> torch.Tensor:
+    if self.prun_masked:
+        return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
+    else:
+        return F.linear(input, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+
+def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
+    if self.active_adapter not in self.lora_A.keys():
+        return self._linear(x)
+
+    previous_dtype = x.dtype
+    if self.disable_adapters:
+        if (self.r[self.active_adapter] > 0) and self.merged:
+            self.unmerge()
+        result = self._linear(x)
+    elif (self.r[self.active_adapter] == 0) or self.merged:
+        result = self._linear(x)
+    else:
+        lora_A = self.lora_A[self.active_adapter]
+        lora_B = self.lora_B[self.active_adapter]
+        dropout = self.lora_dropout[self.active_adapter]
+        scaling = self.scaling[self.active_adapter]
+
+        result = self._linear(x)
+        x = x.to(lora_A.weight.dtype)
+        if not self.lora_masked:
+            result += lora_B(lora_A(dropout(x))) * scaling
+        else:
+            tmp = self.lora_mask * (lora_A.weight.transpose(0, 1) @ lora_B.weight.transpose(0, 1))
+            result += (dropout(x) @ tmp) * scaling
+    result = result.to(previous_dtype)
+    return result
+
+def random_binary_tensor(n, m):
+    # Calculate the number of ones needed
+    num_ones = (n * m) // 2
+    
+    # Create a tensor with all zeros
+    tensor = torch.zeros((n, m), dtype=torch.int)
+    
+    # Get the indices of the tensor
+    indices = torch.arange(n * m)
+    
+    # Shuffle the indices and select the first num_ones indices to set to 1
+    ones_indices = indices[torch.randperm(n * m)][:num_ones]
+    
+    # Set the selected indices to 1
+    tensor.view(-1)[ones_indices] = 1
+    
+    return tensor
+
+def get_n_m_sparse_matrix(w):
+    N, M = 2, 4
+    length = w.numel()
+    group = int(length / M)
+    w_tmp = w.t().detach().abs().reshape(group, M)
+    index = torch.argsort(w_tmp, dim=1)[:, :int(M - N)]
+    mask = torch.ones(w_tmp.shape, device=w_tmp.device)
+    mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape).t()
+    return w * mask, mask
+
+def add_masked_layers(model):
+    for name, module in model.named_modules():
+        if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
+            row, col = module.weight.shape
+            module.lora_mask = nn.Parameter(random_binary_tensor(row, col).to(module.weight.dtype))
+            module.lora_mask.requires_grad = False
+            module.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
+            module.prun_mask.requires_grad = False
+            # Modify forward method
+            module.forward = masked_forward_linear.__get__(module)
+            module.lora_masked = True 
+            module._linear = masked_self_forward_linear.__get__(module)
+            module.prun_masked = True 
+
+def clip_mask(model, lower=0.0, upper=1.0):
+    params = [param for name, param in model.named_parameters() if 'lora_mask' in name]
+    with torch.no_grad():
+        for param in params:
+            param.clamp_(lower, upper)
+            # w, m = get_n_m_sparse_matrix(param)
+            # param.data = m.to(param.dtype)
 
 def custom_optimizer(model):
     # Access the model's parameters
@@ -221,113 +245,6 @@ def custom_optimizer(model):
     optimizer = transformers.AdamW(param_groups)
     return optimizer 
 
-@torch.no_grad()
-def opt_sequential(model, dataloader, dev):
-    print('Starting ...')
-
-    use_cache = model.config.use_cache
-    model.config.use_cache = False
-    layers = model.model.decoder.layers
-
-    model.model.decoder.embed_tokens = model.model.decoder.embed_tokens.to(dev) 
-    model.model.decoder.embed_positions = model.model.decoder.embed_positions.to(dev)
-    if hasattr(model.model.decoder, 'project_out') and model.model.decoder.project_out:
-        model.model.decoder.project_out = model.model.decoder.project_out.to(dev) 
-    if hasattr(model.model.decoder, 'project_in') and model.model.decoder.project_in:
-        model.model.decoder.project_in = model.model.decoder.project_in.to(dev) 
-    layers[0] = layers[0].to(dev)
-
-    dtype = next(iter(model.parameters())).dtype
-    inps = torch.zeros(
-        (args.nsamples, model.seqlen, model.config.hidden_size), dtype=dtype, device=dev
-    )
-    cache = {'i': 0, 'attention_mask': None}
-
-    class Catcher(nn.Module):
-        def __init__(self, module):
-            super().__init__()
-            self.module = module
-        def forward(self, inp, **kwargs):
-            inps[cache['i']] = inp
-            cache['i'] += 1
-            cache['attention_mask'] = kwargs['attention_mask']
-            raise ValueError
-    layers[0] = Catcher(layers[0])
-    for batch in dataloader:
-        try:
-            model(batch[0].to(dev))
-        except ValueError:
-            pass
-    layers[0] = layers[0].module
-
-    layers[0] = layers[0].cpu()
-    model.model.decoder.embed_tokens = model.model.decoder.embed_tokens.cpu()
-    model.model.decoder.embed_positions = model.model.decoder.embed_positions.cpu()
-    if hasattr(model.model.decoder, 'project_out') and model.model.decoder.project_out:
-        model.model.decoder.project_out = model.model.decoder.project_out.cpu()
-    if hasattr(model.model.decoder, 'project_in') and model.model.decoder.project_in:
-        model.model.decoder.project_in = model.model.decoder.project_in.cpu()
-    torch.cuda.empty_cache()
-
-    outs = torch.zeros_like(inps)
-    attention_mask = cache['attention_mask']
-
-    print('Ready.')
-
-    for i in range(len(layers)):
-        layer = layers[i].to(dev)
-
-        subset = find_layers(layer)
-        
-        gpts = {}
-        for name in subset:
-            if (not (args.minlayer <= i < args.maxlayer and args.prune_only in name)) == (not args.invert):
-              continue
-            gpts[name] = SparseGPT(subset[name])
-            if args.wbits < 16:
-                gpts[name].quantizer = Quantizer()
-                gpts[name].quantizer.configure(
-                    args.wbits, perchannel=True, sym=False, mse=False
-                )
-
-        def add_batch(name):
-            def tmp(_, inp, out):
-                gpts[name].add_batch(inp[0].data, out.data)
-            return tmp
-        handles = []
-        for name in gpts:
-            handles.append(subset[name].register_forward_hook(add_batch(name)))
-        for j in range(args.nsamples):
-            outs[j] = layer(inps[j].unsqueeze(0), attention_mask=attention_mask)[0]
-        for h in handles:
-            h.remove()
-
-        for name in gpts:
-            print(i, name)
-            print('Pruning ...')
-            sparsity = args.sparsity
-            # gpts[name].faster_pgd_prune(
-            #     sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
-            # )
-            # gpts[name].admmprune(
-            #     sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
-            # )
-            gpts[name].fasterprune(
-                sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
-            )
-            gpts[name].free()
-
-        for j in range(args.nsamples):
-            outs[j] = layer(inps[j].unsqueeze(0), attention_mask=attention_mask)[0]
-
-        layers[i] = layer.cpu()
-        del layer
-        torch.cuda.empty_cache()
-
-        inps, outs = outs, inps
-
-    model.config.use_cache = use_cache
-    
 if __name__ == '__main__':
     import argparse
     from datautils import *
@@ -415,15 +332,8 @@ if __name__ == '__main__':
         # load_in_8bit=True, 
         device_map='auto',
     )
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
 
-    # model.eval()
-    # model.seqlen = model.config.max_position_embeddings 
-    # dataloader, testloader = get_loaders(
-    #     'c4', nsamples=args.nsamples, seed=args.seed, model=model, seqlen=model.seqlen, tokenizer = tokenizer
-    # )
-    # opt_sequential(model, dataloader, dev=args.device)  
-
+    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-1.3b")
     data = load_dataset("databricks/databricks-dolly-15k")
     data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
 
@@ -451,7 +361,6 @@ if __name__ == '__main__':
     print_trainable_parameters(model)
 
     # Initialize Z, U, and args as per your requirements
-    from admm import Custom_Config, ADMM
     config = Custom_Config()
     config.model = model 
     config.prune_ratios = 0.5

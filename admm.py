@@ -15,8 +15,7 @@ try:
 except ImportError:
     from io import BytesIO         # Python 3.x
 
-class Custom_Config:
-    pass
+
 
 def get_n_m_sparse_matrix(w):
     N, M = 2, 4
@@ -27,6 +26,9 @@ def get_n_m_sparse_matrix(w):
     mask = torch.ones(w_tmp.shape, device=w_tmp.device)
     mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape).t()
     return w * mask, mask
+
+class Custom_Config:
+    pass
 
 class ADMM:
     def __init__(self,config):
