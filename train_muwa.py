@@ -5,7 +5,7 @@ from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 from peft import LoraConfig, get_peft_model 
 import transformers
 from datasets import load_dataset
- import torch.nn.functional as F    
+import torch.nn.functional as F    
 from peft.utils.other import transpose
 from transformers import TrainerCallback
 from admm import Custom_Config, ADMM
@@ -129,7 +129,7 @@ class ADMM:
                 _, m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask))
                 self.ADMM_U[name] = m.data.to(module.weight.dtype)
                 self.ADMM_U[name].requires_grad = False
-                
+
 def print_trainable_parameters(model):
     """
     Prints the number of trainable parameters in the model.
