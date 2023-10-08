@@ -110,99 +110,6 @@ def get_n_m_sparse_matrix(w):
     mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape).t()
     return w * mask, mask
 
-from datautils import get_loaders
-from opt import find_layers
-from sparsegpt import SparseGPT
-@torch.no_grad()
-def prune_sparsegpt(args, model, tokenizer, dev, prune_n=0, prune_m=0):
-    ## SparseGPT code available at: https://github.com/IST-DASLab/sparsegpt/tree/f5c25005a61f96a0933ca2f95705a963585aafaa
-    print('Starting ...')
-    dataloader, _ = get_loaders("c4",nsamples=args.nsamples,seed=args.seed,seqlen=model.seqlen,tokenizer=tokenizer)
-
-    use_cache = model.config.use_cache
-    model.config.use_cache = False
-    layers = model.model.layers
-
-    if "model.embed_tokens" in model.hf_device_map:
-        dev = model.hf_device_map["model.embed_tokens"]
-
-    dtype = next(iter(model.parameters())).dtype
-    inps = torch.zeros(
-        (args.nsamples, model.seqlen, model.config.hidden_size), dtype=dtype, device=dev
-    )
-    cache = {'i': 0, 'attention_mask': None, "position_ids": None}
-
-    class Catcher(nn.Module):
-        def __init__(self, module):
-            super().__init__()
-            self.module = module
-        def forward(self, inp, **kwargs):
-            inps[cache['i']] = inp
-            cache['i'] += 1
-            cache['attention_mask'] = kwargs['attention_mask']
-            cache['position_ids'] = kwargs['position_ids']
-            raise ValueError
-    layers[0] = Catcher(layers[0])
-    for batch in dataloader:
-        try:
-            model(batch[0].to(dev))
-        except ValueError:
-            pass
-    layers[0] = layers[0].module
-    torch.cuda.empty_cache()
-
-    outs = torch.zeros_like(inps)
-    attention_mask = cache['attention_mask']
-    position_ids = cache['position_ids']
-
-    print('Ready.')
-
-    for i in range(len(layers)):
-        layer = layers[i]
-        if f"model.layers.{i}" in model.hf_device_map:
-            dev = model.hf_device_map[f"model.layers.{i}"]
-            print(f"layer {i} device {dev}")
-            inps, outs, attention_mask, position_ids = inps.to(dev), outs.to(dev), attention_mask.to(dev), position_ids.to(dev)
-
-        subset = find_layers(layer)
-
-        gpts = {}
-        for name in subset:
-            gpts[name] = SparseGPT(subset[name])
-
-        def add_batch(name):
-            def tmp(_, inp, out):
-                gpts[name].add_batch(inp[0].data, out.data)
-            return tmp
-
-        handles = []
-        for name in gpts:
-            handles.append(subset[name].register_forward_hook(add_batch(name)))
-
-        for j in range(args.nsamples):
-            outs[j] = layer(inps[j].unsqueeze(0), attention_mask=attention_mask, position_ids=position_ids)[0]
-        for h in handles:
-            h.remove()
-
-        for name in gpts:
-            print(i, name)
-            print('Pruning ...')
-
-            gpts[name].faster_pgd_prune(args.sparsity_ratio, prune_n=prune_n, prune_m=prune_m, percdamp=0.01, blocksize=128)
-            gpts[name].free()
-
-        for j in range(args.nsamples):
-            outs[j] = layer(inps[j].unsqueeze(0), attention_mask=attention_mask, position_ids=position_ids)[0]
-
-        layers[i] = layer 
-        torch.cuda.empty_cache()
-
-        inps, outs = outs, inps
-
-    model.config.use_cache = use_cache
-    torch.cuda.empty_cache()
-
-
 def add_masked_layers(model):
     for name, module in model.named_modules():
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
@@ -286,14 +193,7 @@ class ADMMCallback(TrainerCallback):
     def update_Z(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
-                module.lora_masked = False 
-                module.prun_masked = False
-        config = Custom_Config()
-        config.nsamples = 10
-        config.seed = 10
-        config.nsamples = 10
-        config.sparsity_ratio = 10
-        prune_sparsegpt(config, model, tokenizer, device='cuda:0', prune_n=None, prune_m=None)
+                module.prun_mask.data = (module.lora_mask.data.clone() - trainer.admm.ADMM_U[name].data.clone()).clamp_(0.0, 1.0).data
 
     def update_U(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
@@ -308,6 +208,7 @@ config.prune_ratios = 0.5
 config.rhos = 0.001
 config.sparsity_type = None
 admm = ADMM(config)
+print(admm)
 # Initialize the callback
 admm_callback = ADMMCallback()
 
