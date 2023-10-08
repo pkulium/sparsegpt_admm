@@ -150,8 +150,9 @@ def print_trainable_parameters(model):
 
 def masked_self_forward_linear(self, input: torch.Tensor) -> torch.Tensor:
     if self.prun_masked:
-        self.last_input = input
-        self.last_expected_output = F.linear(input, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+        with torch.no_grad():
+            self.last_input = input
+            self.last_expected_output = F.linear(input, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
         return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
     else:
         return F.linear(input, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
