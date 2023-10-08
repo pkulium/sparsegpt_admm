@@ -145,9 +145,9 @@ class ADMMCallback(TrainerCallback):
         config.nsamples = 10
         config.sparsity_ratio = 10
         config.device = 'cuda:0'
-        dataloader, testloader = get_loaders(
-            'c4', nsamples=config.nsamples, seed=config.seed, model=model, seqlen=model.seqlen, tokenizer = tokenizer
-        )
+        # dataloader, testloader = get_loaders(
+        #     'c4', nsamples=config.nsamples, seed=config.seed, model=model, seqlen=model.seqlen, tokenizer = tokenizer
+        # )
         # opt_sequential(model.model, dataloader, dev=config.device)  
 
     def update_U(self, args, state, control, model=None, **kwargs):
