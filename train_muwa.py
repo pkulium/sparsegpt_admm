@@ -200,7 +200,7 @@ class CustomTrainer(Trainer):
             # if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
                 # print(f'loss:{self.admm.ADMM_U[name]}')
         loss += admm_loss
-        # print(f'loss admm {admm_loss}')
+        print(f'loss admm {admm_loss}')
         return (loss, outputs) if return_outputs else loss
 
 def custom_optimizer(model):
