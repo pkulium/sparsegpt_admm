@@ -265,10 +265,10 @@ def pgd_prun_mask(module, module_name, admm):
         model.prun_mask.requires_grad = True
         model._linear = pgd_prun_mask_forward.__get__(model)
 
-        inputs = module.last_input.copy()
+        inputs = module.last_input.clone()
         module.last_input = None
         # inputs = inputs.to(model.weight.dtype)
-        targets = module.last_expected_output.copy()
+        targets = module.last_expected_output.clone()
         module.last_expected_output = None
         # targets = targets.to(model.weight.dtype)
 
