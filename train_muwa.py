@@ -218,7 +218,7 @@ def custom_optimizer(model):
     ]
 
     # Use AdamW for the special_param
-    optimizer = transformers.Adam(param_groups)
+    optimizer = transformers.AdamW(param_groups)
     return optimizer 
 
 @torch.no_grad()
