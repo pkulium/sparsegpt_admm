@@ -21,7 +21,6 @@ from datasets import load_dataset
 data = load_dataset("databricks/databricks-dolly-15k")
 data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
 
- 
 for param in model.parameters():
     param.requires_grad = False    
     if param.ndim == 1:
@@ -51,7 +50,10 @@ def print_trainable_parameters(model):
 import torch.nn.functional as F    
 from peft.utils.other import transpose
 def masked_self_forward_linear(self, input: torch.Tensor) -> torch.Tensor:
-    return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
+    if self.prun_masked:
+        return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
+    else:
+        return F.linear(input, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
 
 def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
     if self.active_adapter not in self.lora_A.keys():
@@ -72,10 +74,11 @@ def masked_forward_linear(self, x: torch.Tensor) -> torch.Tensor:
 
         result = self._linear(x)
         x = x.to(lora_A.weight.dtype)
-        # result += lora_B(lora_A(dropout(x))) * scaling
-        tmp = self.lora_mask * (lora_A.weight.transpose(0, 1) @ lora_B.weight.transpose(0, 1))
-        result += (dropout(x) @ tmp) * scaling
-
+        if self.lora_masked:
+            result += lora_B(lora_A(dropout(x))) * scaling
+        else:
+            tmp = self.lora_mask * (lora_A.weight.transpose(0, 1) @ lora_B.weight.transpose(0, 1))
+            result += (dropout(x) @ tmp) * scaling
     result = result.to(previous_dtype)
     return result
 
@@ -107,6 +110,99 @@ def get_n_m_sparse_matrix(w):
     mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape).t()
     return w * mask, mask
 
+from datautils import get_loaders
+from opt import find_layers
+from sparsegpt import SparseGPT
+@torch.no_grad()
+def prune_sparsegpt(args, model, tokenizer, dev, prune_n=0, prune_m=0):
+    ## SparseGPT code available at: https://github.com/IST-DASLab/sparsegpt/tree/f5c25005a61f96a0933ca2f95705a963585aafaa
+    print('Starting ...')
+    dataloader, _ = get_loaders("c4",nsamples=args.nsamples,seed=args.seed,seqlen=model.seqlen,tokenizer=tokenizer)
+
+    use_cache = model.config.use_cache
+    model.config.use_cache = False
+    layers = model.model.layers
+
+    if "model.embed_tokens" in model.hf_device_map:
+        dev = model.hf_device_map["model.embed_tokens"]
+
+    dtype = next(iter(model.parameters())).dtype
+    inps = torch.zeros(
+        (args.nsamples, model.seqlen, model.config.hidden_size), dtype=dtype, device=dev
+    )
+    cache = {'i': 0, 'attention_mask': None, "position_ids": None}
+
+    class Catcher(nn.Module):
+        def __init__(self, module):
+            super().__init__()
+            self.module = module
+        def forward(self, inp, **kwargs):
+            inps[cache['i']] = inp
+            cache['i'] += 1
+            cache['attention_mask'] = kwargs['attention_mask']
+            cache['position_ids'] = kwargs['position_ids']
+            raise ValueError
+    layers[0] = Catcher(layers[0])
+    for batch in dataloader:
+        try:
+            model(batch[0].to(dev))
+        except ValueError:
+            pass
+    layers[0] = layers[0].module
+    torch.cuda.empty_cache()
+
+    outs = torch.zeros_like(inps)
+    attention_mask = cache['attention_mask']
+    position_ids = cache['position_ids']
+
+    print('Ready.')
+
+    for i in range(len(layers)):
+        layer = layers[i]
+        if f"model.layers.{i}" in model.hf_device_map:
+            dev = model.hf_device_map[f"model.layers.{i}"]
+            print(f"layer {i} device {dev}")
+            inps, outs, attention_mask, position_ids = inps.to(dev), outs.to(dev), attention_mask.to(dev), position_ids.to(dev)
+
+        subset = find_layers(layer)
+
+        gpts = {}
+        for name in subset:
+            gpts[name] = SparseGPT(subset[name])
+
+        def add_batch(name):
+            def tmp(_, inp, out):
+                gpts[name].add_batch(inp[0].data, out.data)
+            return tmp
+
+        handles = []
+        for name in gpts:
+            handles.append(subset[name].register_forward_hook(add_batch(name)))
+
+        for j in range(args.nsamples):
+            outs[j] = layer(inps[j].unsqueeze(0), attention_mask=attention_mask, position_ids=position_ids)[0]
+        for h in handles:
+            h.remove()
+
+        for name in gpts:
+            print(i, name)
+            print('Pruning ...')
+
+            gpts[name].faster_pgd_prune(args.sparsity_ratio, prune_n=prune_n, prune_m=prune_m, percdamp=0.01, blocksize=128)
+            gpts[name].free()
+
+        for j in range(args.nsamples):
+            outs[j] = layer(inps[j].unsqueeze(0), attention_mask=attention_mask, position_ids=position_ids)[0]
+
+        layers[i] = layer 
+        torch.cuda.empty_cache()
+
+        inps, outs = outs, inps
+
+    model.config.use_cache = use_cache
+    torch.cuda.empty_cache()
+
+
 def add_masked_layers(model):
     for name, module in model.named_modules():
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
@@ -117,7 +213,9 @@ def add_masked_layers(model):
             module.prun_mask.requires_grad = False
             # Modify forward method
             module.forward = masked_forward_linear.__get__(module)
+            module.lora_masked = True 
             module._linear = masked_self_forward_linear.__get__(module)
+            module.prun_masked = True 
 
 from peft import LoraConfig, get_peft_model 
 
@@ -173,26 +271,11 @@ class ADMMCallback(TrainerCallback):
         optimizer.add_param_group(special_optimizer.param_groups[0])
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
-        # This will be executed at the end of each training step
-        # You can perform optimizer step, zero_grad, etc. here if needed
-        # But usually, this is handled by the Trainer itself
-        
-        # If you need to access or modify model parameters, optimizer, etc.
-        # You can access them using the `model` and `trainer` objects
-        # For example: model.parameters(), trainer.optimizer, etc.
-        # print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
         clip_mask(model)
-        # print(model.model.model.decoder.layers[2].self_attn.v_proj.lora_mask)
-        # for group in kwargs['optimizer'].param_groups:
-            # for param in group['params']:
-                # print(param)  # This will print the Tensor representing each parameter being optimized
-        # self.update_X()
-        # self.update_Z()
-        # self.update_U()
+        self.update_Z(args, state, control, model, **kwargs)
+        self.update_U(args, state, control, model, **kwargs)
         
     def on_epoch_end(self, args, state, control, model=None, **kwargs):
-        # This will be executed at the end of each epoch
-        # You can perform your X, Z, U updates here
         print('update_X')
         pass
     
@@ -200,11 +283,22 @@ class ADMMCallback(TrainerCallback):
         print('update_X')
         pass
 
-    def update_Z(self):
-        pass
+    def update_Z(self, args, state, control, model=None, **kwargs):
+        for name, module in model.named_modules():
+            if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
+                module.lora_masked = False 
+                module.prun_masked = False
+        config = Custom_Config()
+        config.nsamples = 10
+        config.seed = 10
+        config.nsamples = 10
+        config.sparsity_ratio = 10
+        prune_sparsegpt(config, model, tokenizer, device='cuda:0', prune_n=None, prune_m=None)
 
-    def update_U(self):
-        pass
+    def update_U(self, args, state, control, model=None, **kwargs):
+        for name, module in model.named_modules():
+            if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
+                trainer.admm.ADMM_U[name] = trainer.admm.ADMM_U[name].data.clone() + module.prun_mask.data.clone() - module.lora_mask.data.clone()
 
 # # Initialize Z, U, and args as per your requirements
 from admm import Custom_Config, ADMM
@@ -214,7 +308,6 @@ config.prune_ratios = 0.5
 config.rhos = 0.001
 config.sparsity_type = None
 admm = ADMM(config)
-print(admm)
 # Initialize the callback
 admm_callback = ADMMCallback()
 
@@ -259,13 +352,13 @@ class CustomTrainer(Trainer):
 
         # print(f'loss nature {loss}')
         admm_loss = 0
-        for name, mask in self.admm.ADMM_X.items():
-            admm_loss = self.admm.rho[name] / 2 * (self.admm.ADMM_X[name] - self.admm.ADMM_U[name]).norm()
-            admm_loss += admm_loss
+        for name, module in self.model.named_modules():
+            if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
+                admm_loss += self.admm.rho[name] / 2 * (module.lora_mask - self.admm.ADMM_U[name]).norm()
             # if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
                 # print(f'loss:{self.admm.ADMM_U[name]}')
         loss += admm_loss
-        print(f'loss admm {admm_loss}')
+        # print(f'loss admm {admm_loss}')
         return (loss, outputs) if return_outputs else loss
 
 
@@ -294,8 +387,8 @@ trainer = CustomTrainer(
         per_device_train_batch_size=4, 
         gradient_accumulation_steps=4,
         warmup_steps=100, 
-        num_train_epochs=1,      
-        # max_steps=10,           
+        # num_train_epochs=3,      
+        max_steps=20,           
         learning_rate=2e-4, 
         fp16=True,
         logging_steps=10, 
