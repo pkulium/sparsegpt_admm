@@ -271,7 +271,7 @@ def pgd_prun_mask(module, admm):
     mask_optimizer = torch.optim.AdamW([model.prun_mask], lr=0.001)
     rho = 0.01  # You can adjust tsshis value to change the strength of the regularization
     total_epoch = 1
-    device = module.device
+    device = 'cuda:0'
 
     for epoch in range(total_epoch):
         # for i, (inputs, targets) in enumerate(train_loader):
