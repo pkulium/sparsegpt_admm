@@ -253,29 +253,30 @@ def custom_optimizer(model):
     return optimizer 
 import copy
 def pgd_prun_mask(module, module_name, admm):
+    def pgd_prun_mask_forward(self, input: torch.Tensor) -> torch.Tensor:
+        return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
      # apply mask from pgd
-    # model = copy.deepcopy(module)
-    model = module
-    model.disable_adapters = True
-    model.eval()
-    model.lora_masked = False
-    model.prun_masked = True
-    module.prun_mask.requires_grad = True
+    model = nn.Linear(module.weight.in_features, module.weight.in_features, module.weight.bias)
+    model.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
+    with torch.no_grad():
+        model.weight.data = module.weight.data.copy()
+        model.bias.data = module.bias.data.copy()
+        model.prun_mask.data = module.prun_mask.data.copy()
+        model.prun_mask.requires_grad = True
+        model._linear = pgd_prun_mask_forward.__get__(model)
 
-    inputs = module.last_input
-    inputs = inputs.to(model.weight.dtype)
-    targets = module.last_expected_output
-    targets = targets.to(model.weight.dtype)
+        inputs = module.last_input.copy()
+        module.last_input = None
+        # inputs = inputs.to(model.weight.dtype)
+        targets = module.last_expected_output.copy()
+        module.last_expected_output = None
+        # targets = targets.to(model.weight.dtype)
 
-    from torch.utils.data import TensorDataset, DataLoader
-    # dataset = TensorDataset(input, output)
-    # train_loader = DataLoader(dataset, batch_size=1, shuffle=True)
     criterion = nn.MSELoss()  
     mask_optimizer = torch.optim.AdamW([model.prun_mask], lr=0.001)
     rho = 0.01  # You can adjust tsshis value to change the strength of the regularization
     total_epoch = 1
     device = 'cuda:0'
-
     for epoch in range(total_epoch):
         # for i, (inputs, targets) in enumerate(train_loader):
         # inputs, targets = inputs.to(device), targets.to(device)
