@@ -256,7 +256,7 @@ def pgd_prun_mask(module, module_name, admm):
     def pgd_prun_mask_forward(self, input: torch.Tensor) -> torch.Tensor:
         return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
      # apply mask from pgd
-    model = nn.Linear(module.weight.in_features, module.weight.in_features, module.weight.bias)
+    model = nn.Linear(module.in_features, module.in_features, module.bias)
     model.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
     with torch.no_grad():
         model.weight.data = module.weight.data.copy()
