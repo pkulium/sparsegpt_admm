@@ -21,8 +21,8 @@ class CastOutputToFloat(nn.Sequential):
         return super().forward(x).to(torch.float32)
 
 class ADMMCallback(TrainerCallback):
-    def __init__(self):
-        pass
+    def __init__(self, admm):
+        self.admm = admm
 
     def on_train_begin(self, args, state, control, model, **kwargs):
         optimizer = kwargs['optimizer']
@@ -47,7 +47,7 @@ class ADMMCallback(TrainerCallback):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                  # apply mask from pgd
-                updated_prun_mask = pgd_prun_mask(module, args.trainer.admm)
+                updated_prun_mask = pgd_prun_mask(module, admm)
                 module.last_input = None                
                 module.last_expected_output = None
                 module.prun_mask.data = updated_prun_mask
@@ -412,7 +412,7 @@ if __name__ == '__main__':
     config.sparsity_type = None
     admm = ADMM(config)
     # Initialize the callback
-    admm_callback = ADMMCallback()
+    admm_callback = ADMMCallback(admm)
 
     trainer = CustomTrainer(
         model=model, 
