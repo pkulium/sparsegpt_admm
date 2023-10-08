@@ -433,7 +433,7 @@ if __name__ == '__main__':
             per_device_train_batch_size=4, 
             gradient_accumulation_steps=4,
             warmup_steps=100, 
-            num_train_epochs=1,      
+            num_train_epochs=3,      
             # max_steps=20,           
             learning_rate=2e-4, 
             fp16=True,
@@ -447,4 +447,4 @@ if __name__ == '__main__':
     trainer.admm = admm
     model.config.use_cache = False 
     trainer.train(resume_from_checkpoint = False)
-    model.save_pretrained("lora-muwa-1.3b-opt")
+    # model.save_pretrained("lora-muwa-1.3b-opt")
