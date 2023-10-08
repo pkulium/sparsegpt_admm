@@ -50,7 +50,8 @@ class ADMMCallback(TrainerCallback):
                 updated_prun_mask = pgd_prun_mask(module, name, admm)
                 module.last_input = None                
                 module.last_expected_output = None
-                module.prun_mask.data = updated_prun_mask
+                with torch.no_grad():
+                    module.prun_mask.data = updated_prun_mask.clone()
 
     def update_U(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
@@ -255,7 +256,11 @@ import copy
 def pgd_prun_mask(module, module_name, admm):
     def pgd_prun_mask_forward(self, input: torch.Tensor) -> torch.Tensor:
         return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
-     # apply mask from pgd
+    def clip_mask(model, lower=0.0, upper=1.0):
+        params = [param for name, param in model.named_parameters() if 'prun_mask' in name]
+        with torch.no_grad():
+            for param in params:
+                param.clamp_(lower, upper)
     model = nn.Linear(module.in_features, module.in_features, True)
     model.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
     with torch.no_grad():
@@ -293,7 +298,7 @@ def pgd_prun_mask(module, module_name, admm):
         clip_mask(model)
         if epoch == 0 or epoch == total_epoch - 1:
             print(f"Epoch {epoch}, Loss: {loss.item()}")
-        return 
+    return model.prun_mask.data
 
 if __name__ == '__main__':
     import argparse
