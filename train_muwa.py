@@ -214,7 +214,7 @@ def custom_optimizer(model):
 
     # Define a parameter group with a custom learning rate for the special_param
     param_groups = [
-        {'params': special_params, 'lr': 0.01}
+        {'params': special_params, 'lr': 0.1}
     ]
 
     # Use AdamW for the special_param
