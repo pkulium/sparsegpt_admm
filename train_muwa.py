@@ -251,8 +251,6 @@ def clip_mask(model, lower=0.0, upper=1.0):
     with torch.no_grad():
         for param in params:
             param.clamp_(lower, upper)
-            # w, m = get_n_m_sparse_matrix(param)
-            # param.data = m.to(param.dtype)
 
 def custom_optimizer(model):
     # Access the model's parameters
@@ -318,7 +316,7 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--model', type=str, 
-        default = 'facebook/opt-125m',
+        default = 'facebook/opt-1.3b',
         help='OPT model to load; pass `facebook/opt-X`.'
     )
     parser.add_argument(
@@ -393,12 +391,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     model = AutoModelForCausalLM.from_pretrained(
-        "facebook/opt-125m", 
+        "facebook/opt-1.3b", 
         # load_in_8bit=True, 
         device_map='auto',
     )
 
-    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-1.3b")
     data = load_dataset("databricks/databricks-dolly-15k")
     data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
 
@@ -456,4 +454,4 @@ if __name__ == '__main__':
     trainer.admm = admm
     model.config.use_cache = False 
     trainer.train(resume_from_checkpoint = False)
-    # model.save_pretrained("lora-muwa-125m-opt")
+    # model.save_pretrained("lora-muwa-1.3b-opt")
