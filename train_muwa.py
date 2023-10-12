@@ -47,13 +47,9 @@ class ADMMCallback(TrainerCallback):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                  # apply mask from pgd
-                with torch.no_grad():
-                    _, module.lora_mask.data = get_n_m_sparse_matrix(module.lora_mask.data)
                 updated_prun_mask = pgd_prun_mask(module, name, admm)
                 module.last_input = None                
                 module.last_expected_output = None
-                with torch.no_grad():
-                    module.prun_mask.data = updated_prun_mask.clone()
                 if state.global_step % 10 == 0:
                     print(f'prun mask: {module.prun_mask}')
                     print(f'lora mask: {module.lora_mask}')
@@ -250,8 +246,8 @@ def clip_mask(model, lower=0.0, upper=1.0):
     with torch.no_grad():
         for param in params:
             param.clamp_(lower, upper)
-            # w, m = get_n_m_sparse_matrix(param)
-            # param.data = m.to(param.dtype)
+            w, m = get_n_m_sparse_matrix(param)
+            param.data = m.to(param.dtype)
 
 def custom_optimizer(model):
     # Access the model's parameters
