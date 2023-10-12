@@ -145,7 +145,7 @@ class ADMM:
                 self.ADMM_U[name].requires_grad = False
 
                 self.ADMM_Z[name] = nn.Linear(module.in_features, module.out_features, True)
-                self.ADMM_Z[name].layer_calibration = layer_calibrations[name]
+                self.ADMM_Z[name].layer_calibration = layer_calibrations[f'base_model.{name}']
                 self.ADMM_Z[name].prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
                 self.ADMM_Z[name].eval()
                 with torch.no_grad():
