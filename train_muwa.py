@@ -46,6 +46,8 @@ class ADMMCallback(TrainerCallback):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                  # apply mask from pgd
+                with torch.no_grad():
+                    module.lora_mask.data = get_n_m_sparse_matrix(module.lora_mask).clone()
                 updated_prun_mask = pgd_prun_mask(module, name, admm)
                 module.last_input = None                
                 module.last_expected_output = None
@@ -304,7 +306,7 @@ def pgd_prun_mask(module, module_name, admm):
             clip_mask(model)
         # if epoch == 0 or epoch == total_epoch - 1:
             # print(f"Epoch {epoch}, Loss: {loss.item()}")
-    # _, model.prun_mask.data = get_n_m_sparse_matrix(model.prun_mask.data)
+    _, model.prun_mask.data = get_n_m_sparse_matrix(model.prun_mask.data)
     return model.prun_mask.data
 
 from sparsegpt import *
