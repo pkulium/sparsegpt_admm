@@ -422,7 +422,7 @@ if __name__ == '__main__':
             gradient_accumulation_steps=4,
             warmup_steps=100, 
             # num_train_epochs=3,      
-            max_steps=20,           
+            max_steps=10,           
             learning_rate=2e-4, 
             fp16=True,
             logging_steps=10, 
