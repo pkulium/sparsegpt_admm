@@ -61,17 +61,15 @@ class ADMM:
 
                 def pgd_prun_mask_forward(self, input: torch.Tensor) -> torch.Tensor:
                     return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
-                model = nn.Linear(module.in_features, module.in_features, True)
-                model.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
-                model.eval()
+                self.ADMM_Z[name] = nn.Linear(module.in_features, module.in_features, True)
+                self.ADMM_Z[name].prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
+                self.ADMM_Z[name].eval()
                 with torch.no_grad():
-                    model.weight.data = module.weight.data.clone()
-                    model.bias.data = module.bias.data.clone()
-                    model.prun_mask.data = module.prun_mask.data.clone()
-                    model.prun_mask.requires_grad = True
-                    model._linear = pgd_prun_mask_forward.__get__(model)
-                self.ADMM_Z[name] = model
-
+                    self.ADMM_Z[name].weight.data = module.weight.data.clone()
+                    self.ADMM_Z[name].bias.data = module.bias.data.clone()
+                    self.ADMM_Z[name].prun_mask.data = module.prun_mask.data.clone()
+                    self.ADMM_Z[name].prun_mask.requires_grad = True
+                    self.ADMM_Z[name]._linear = pgd_prun_mask_forward.__get__(self.ADMM_Z[name])
 def weight_pruning(config,weight,prune_ratio):
      """ 
      weight pruning [irregular,column,filter]
