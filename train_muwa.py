@@ -52,6 +52,9 @@ class ADMMCallback(TrainerCallback):
                 module.last_expected_output = None
                 with torch.no_grad():
                     module.prun_mask.data = updated_prun_mask.clone()
+                print(f'prun mask: {module.prun_mask}')
+                print(f'lora mask: {module.lora_mask}')
+                print(f'admm u:    {admm.ADMM_U[name]}')
 
     def update_U(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
@@ -97,7 +100,7 @@ class CustomTrainer(Trainer):
         admm_loss = 0
         for name, module in self.model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
-                admm_loss += self.admm.rho[name] / 2 * (module.lora_mask - self.admm.ADMM_U[name]).norm()
+                admm_loss += self.admm.rho[name] / 2 * (module.lora_mask.data - self.admm.ADMM_U[name]).norm()
             # if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
                 # print(f'loss:{self.admm.ADMM_U[name]}')
         loss += admm_loss
@@ -300,9 +303,6 @@ def pgd_prun_mask(module, module_name, admm):
         clip_mask(model)
         # if epoch == 0 or epoch == total_epoch - 1:
             # print(f"Epoch {epoch}, Loss: {loss.item()}")
-    print(f'prun mask: {model.prun_mask}')
-    print(f'lora mask: {lora_mask}')
-    print(f'admm u:    {admm.ADMM_U[module_name]}')
     return model.prun_mask.data
 
 if __name__ == '__main__':
