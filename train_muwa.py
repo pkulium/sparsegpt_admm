@@ -454,7 +454,7 @@ if __name__ == '__main__':
         help='Percent of the average Hessian diagonal to use for dampening.'
     )
     parser.add_argument(
-        '--sparsity', type=float, default=0,
+        '--sparsity', type=float, default=0.5,
         help='Target sparsity'
     )
     parser.add_argument(
