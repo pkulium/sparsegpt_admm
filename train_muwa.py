@@ -143,7 +143,9 @@ class ADMM:
                 _, m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask))
                 self.ADMM_U[name] = m.data.to(dtype=module.weight.dtype, device = module.prun_mask.device)
                 self.ADMM_U[name].requires_grad = False
+
                 self.ADMM_Z[name] = nn.Linear(module.in_features, module.out_features, True)
+                self.ADMM_Z[name].layer_calibrations
                 self.ADMM_Z[name].prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
                 self.ADMM_Z[name].eval()
                 with torch.no_grad():
@@ -325,7 +327,7 @@ def get_opt(model):
 
 @torch.no_grad()
 def get_layer_calibrations(model, dataloader, dev):
-    layer_calibrations = []
+    layer_calibrations = {}
     print('Starting ...')
 
     use_cache = model.config.use_cache
@@ -383,7 +385,6 @@ def get_layer_calibrations(model, dataloader, dev):
         subset = find_layers(layer)
         
         gpts = {}
-        layer_calibrations.append({})
         for name in subset:
             if (not (args.minlayer <= i < args.maxlayer and args.prune_only in name)) == (not args.invert):
               continue
@@ -407,13 +408,14 @@ def get_layer_calibrations(model, dataloader, dev):
             h.remove()
 
         for name in gpts:
-            print(i, name)
-            print('Pruning ...')
-            sparsity = args.sparsity
+            # print(i, name)
+            # print('Pruning ...')
+            # sparsity = args.sparsity
             # gpts[name].fasterprune(
             #     sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
             # )
-            layer_calibrations[i][name] = (gpts[name].inp1, gpts[name].out1)
+            name_ = f'model.model.decoder.layers.{i}.{name}'
+            layer_calibrations[name_] = (gpts[name].inp1, gpts[name].out1)
             gpts[name].free()
 
         for j in range(args.nsamples):
@@ -525,17 +527,23 @@ if __name__ == '__main__':
             print(n, torch.mean((p == 0).float()))
             if 'fc2' in n:
                 break
+        import pickle
         print(time.time() - tick)
+        with open('layer_calibrations', 'wb') as f:
+            pickle.dump(layer_calibrations, f)
+
         del model
         del dataloader
         del testloader
+        del layer_calibrations
 
     model = AutoModelForCausalLM.from_pretrained(
         "facebook/opt-125m", 
         # load_in_8bit=True, 
         device_map='auto',
     )
-
+    with open('layer_calibrations', 'rb') as f:
+        layer_calibrations = pickle.load(f)
     tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
     data = load_dataset("databricks/databricks-dolly-15k")
     data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
