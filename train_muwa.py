@@ -34,8 +34,8 @@ class ADMMCallback(TrainerCallback):
         clip_mask(model)
         
     def on_epoch_end(self, args, state, control, model=None, **kwargs):
-        self.update_Z(args, state, control, model, **kwargs)
-        self.update_U(args, state, control, model, **kwargs)
+        # self.update_Z(args, state, control, model, **kwargs)
+        # self.update_U(args, state, control, model, **kwargs)
         pass
     
     def update_X(self):
@@ -104,11 +104,11 @@ class CustomTrainer(Trainer):
         admm_loss = 0
         for name, module in self.model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
-                admm_loss += self.admm.rho[name] / 2 * (module.lora_mask.data - self.admm.ADMM_U[name]).norm()
+                admm_loss += self.admm.rho[name] / 2 * (module.lora_mask - self.admm.ADMM_U[name]).norm()
             # if name == 'base_model.model.model.decoder.layers.0.self_attn.v_proj':
                 # print(f'loss:{self.admm.ADMM_U[name]}')
         loss += admm_loss
-        # print(f'loss admm {admm_loss}')
+        print(f'loss admm {admm_loss}')
         return (loss, outputs) if return_outputs else loss
 
 class Custom_Config:
