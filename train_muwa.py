@@ -34,8 +34,8 @@ class ADMMCallback(TrainerCallback):
         clip_mask(model)
         
     def on_epoch_end(self, args, state, control, model=None, **kwargs):
-        # self.update_Z(args, state, control, model, **kwargs)
-        # self.update_U(args, state, control, model, **kwargs)
+        self.update_Z(args, state, control, model, **kwargs)
+        self.update_U(args, state, control, model, **kwargs)
         pass
     
     def update_X(self):
