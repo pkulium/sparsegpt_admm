@@ -48,7 +48,7 @@ class ADMMCallback(TrainerCallback):
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                  # apply mask from pgd
                 with torch.no_grad():
-                    _, module.lora.data = get_n_m_sparse_matrix(module.lora_mask.data)
+                    _, module.lora_mask.data = get_n_m_sparse_matrix(module.lora_mask.data)
                 updated_prun_mask = pgd_prun_mask(module, name, admm)
                 module.last_input = None                
                 module.last_expected_output = None
