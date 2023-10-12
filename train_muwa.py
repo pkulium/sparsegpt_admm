@@ -393,12 +393,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     model = AutoModelForCausalLM.from_pretrained(
-        "facebook/opt-125m", 
+        "facebook/opt-1.3b", 
         # load_in_8bit=True, 
         device_map='auto',
     )
 
-    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-1.3b")
     data = load_dataset("databricks/databricks-dolly-15k")
     data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
 
