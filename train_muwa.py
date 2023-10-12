@@ -408,8 +408,8 @@ def get_layer_calibrations(model, dataloader, dev):
             h.remove()
 
         for name in gpts:
-            # print(i, name)
-            # print('Pruning ...')
+            print(i, name)
+            print('Loading ...')
             # sparsity = args.sparsity
             # gpts[name].fasterprune(
             #     sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
