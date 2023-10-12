@@ -1,7 +1,6 @@
 import os
 import torch
 import torch.nn as nn
-import bitsandbytes as bnb
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 
 import os
