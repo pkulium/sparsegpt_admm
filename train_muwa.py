@@ -297,7 +297,7 @@ def pgd_prun_mask(module, module_name, admm):
     sample = 0
     for epoch in range(total_epoch):
         for i, (inputs, targets) in enumerate(admm.ADMM_Z[module_name].train_loader):
-            sample += len(input)
+            sample += len(inputs)
             inputs, targets = inputs.to(device), targets.to(device)
             mask_optimizer.zero_grad()
             outputs = model.forward(inputs)
