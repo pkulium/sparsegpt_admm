@@ -324,7 +324,8 @@ def get_opt(model):
     return model
 
 @torch.no_grad()
-def opt_sequential(model, dataloader, dev):
+def get_layer_calibrations(model, dataloader, dev):
+    layer_calibrations = []
     print('Starting ...')
 
     use_cache = model.config.use_cache
@@ -382,6 +383,7 @@ def opt_sequential(model, dataloader, dev):
         subset = find_layers(layer)
         
         gpts = {}
+        layer_calibrations[i] = {}
         for name in subset:
             if (not (args.minlayer <= i < args.maxlayer and args.prune_only in name)) == (not args.invert):
               continue
@@ -408,9 +410,10 @@ def opt_sequential(model, dataloader, dev):
             print(i, name)
             print('Pruning ...')
             sparsity = args.sparsity
-            gpts[name].fasterprune(
-                sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
-            )
+            # gpts[name].fasterprune(
+            #     sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
+            # )
+            layer_calibrations[i][name] = (gpts[name].inp1, gpts[name].out1)
             gpts[name].free()
 
         for j in range(args.nsamples):
@@ -423,6 +426,7 @@ def opt_sequential(model, dataloader, dev):
         inps, outs = outs, inps
 
     model.config.use_cache = use_cache
+    return layer_calibrations
 
 
 if __name__ == '__main__':
@@ -507,22 +511,25 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    model = get_opt(args.model)
-    model.eval()
-
-    dataloader, testloader = get_loaders(
-        args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=model.seqlen
-    )
-
+    layer_calibrations = None
     if (args.sparsity or args.prunen) and not args.gmp:
+        model = get_opt(args.model)
+        model.eval()
+
+        dataloader, testloader = get_loaders(
+            args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=model.seqlen
+        )
         tick = time.time()
-        opt_sequential(model, dataloader, DEV)
+        layer_calibrations = get_layer_calibrations(model, dataloader, DEV)
         for n, p in model.named_parameters():
             print(n, torch.mean((p == 0).float()))
             if 'fc2' in n:
                 break
         print(time.time() - tick)
-    
+        del model
+        del dataloader
+        del testloader
+
     model = AutoModelForCausalLM.from_pretrained(
         "facebook/opt-125m", 
         # load_in_8bit=True, 
