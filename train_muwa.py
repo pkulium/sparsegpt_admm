@@ -11,7 +11,7 @@ from transformers import TrainerCallback
 from admm import Custom_Config, ADMM
 from torch import nn
 from transformers import Trainer
-
+import pickle
 
 import os
 os.environ["WANDB_DISABLED"] = "true"
@@ -145,7 +145,7 @@ class ADMM:
                 self.ADMM_U[name].requires_grad = False
 
                 self.ADMM_Z[name] = nn.Linear(module.in_features, module.out_features, True)
-                self.ADMM_Z[name].layer_calibrations
+                self.ADMM_Z[name].layer_calibration = layer_calibrations[name]
                 self.ADMM_Z[name].prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
                 self.ADMM_Z[name].eval()
                 with torch.no_grad():
@@ -514,36 +514,36 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     layer_calibrations = None
-    if (args.sparsity or args.prunen) and not args.gmp:
-        model = get_opt(args.model)
-        model.eval()
+    # if (args.sparsity or args.prunen) and not args.gmp:
+    #     model = get_opt(args.model)
+    #     model.eval()
 
-        dataloader, testloader = get_loaders(
-            args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=model.seqlen
-        )
-        tick = time.time()
-        layer_calibrations = get_layer_calibrations(model, dataloader, DEV)
-        for n, p in model.named_parameters():
-            print(n, torch.mean((p == 0).float()))
-            if 'fc2' in n:
-                break
-        import pickle
-        print(time.time() - tick)
-        with open('layer_calibrations', 'wb') as f:
-            pickle.dump(layer_calibrations, f)
+    #     dataloader, testloader = get_loaders(
+    #         args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=model.seqlen
+    #     )
+    #     tick = time.time()
+    #     layer_calibrations = get_layer_calibrations(model, dataloader, DEV)
+    #     for n, p in model.named_parameters():
+    #         print(n, torch.mean((p == 0).float()))
+    #         if 'fc2' in n:
+    #             break
+    #     print(time.time() - tick)
+    #     with open('layer_calibrations', 'wb') as f:
+    #         pickle.dump(layer_calibrations, f)
 
-        del model
-        del dataloader
-        del testloader
-        del layer_calibrations
+    #     del model
+    #     del dataloader
+    #     del testloader
+    #     del layer_calibrations
+    with open('layer_calibrations', 'rb') as f:
+        layer_calibrations = pickle.load(f)
 
     model = AutoModelForCausalLM.from_pretrained(
         "facebook/opt-125m", 
         # load_in_8bit=True, 
         device_map='auto',
     )
-    with open('layer_calibrations', 'rb') as f:
-        layer_calibrations = pickle.load(f)
+    
     tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
     data = load_dataset("databricks/databricks-dolly-15k")
     data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
