@@ -54,7 +54,7 @@ class ADMMCallback(TrainerCallback):
                     module.prun_mask.data = updated_prun_mask
                 if state.global_step % 50 == 0:
                     print('-' * 64)
-                    print(f'admm loss: {torch.sum(module.prun_mask - module.lora_mask)}')
+                    print(f'admm loss: {torch.sum(torch.abs(module.prun_mask - module.lora_mask))}')
                     print(f'prun mask: {module.prun_mask}')
                     print(f'lora mask: {module.lora_mask}')
                     print(f'admm u:    {admm.ADMM_U[name]}')
