@@ -50,6 +50,8 @@ class ADMMCallback(TrainerCallback):
                 updated_prun_mask = pgd_prun_mask(module, name, admm)
                 module.last_input = None                
                 module.last_expected_output = None
+                with torch.no_grad():
+                    module.prun_mask.data = updated_prun_mask
                 if state.global_step % 10 == 0:
                     print(f'prun mask: {module.prun_mask}')
                     print(f'lora mask: {module.lora_mask}')
