@@ -251,8 +251,8 @@ def clip_mask(model, lower=0.0, upper=1.0):
     with torch.no_grad():
         for param in params:
             param.clamp_(lower, upper)
-            w, m = get_n_m_sparse_matrix(param)
-            param.data = m.to(param.dtype)
+            # w, m = get_n_m_sparse_matrix(param)
+            # param.data = m.to(param.dtype)
 
 def custom_optimizer(model):
     # Access the model's parameters
@@ -307,7 +307,7 @@ def pgd_prun_mask(module, module_name, admm):
         clip_mask(model)
         # if epoch == 0 or epoch == total_epoch - 1:
             # print(f"Epoch {epoch}, Loss: {loss.item()}")
-    _, model.prun_mask.data = get_n_m_sparse_matrix(model.prun_mask.data)
+    # _, model.prun_mask.data = get_n_m_sparse_matrix(model.prun_mask.data)
     return model.prun_mask.data
 
 if __name__ == '__main__':
