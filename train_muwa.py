@@ -293,8 +293,10 @@ def pgd_prun_mask(module, module_name, admm):
     mask_optimizer = torch.optim.AdamW([model.prun_mask], lr=0.01)
     total_epoch = 1
     device = 'cuda:0'
+    sample = 0
     for epoch in range(total_epoch):
         for i, (inputs, targets) in enumerate(admm.ADMM_Z[module_name].train_loader):
+            sample += len(input)
             inputs, targets = inputs.to(device), targets.to(device)
             mask_optimizer.zero_grad()
             outputs = model.forward(inputs)
@@ -306,6 +308,7 @@ def pgd_prun_mask(module, module_name, admm):
             clip_mask(model)
         # if epoch == 0 or epoch == total_epoch - 1:
             # print(f"Epoch {epoch}, Loss: {loss.item()}")
+    print(f'sample:{sample}')
     _, model.prun_mask.data = get_n_m_sparse_matrix(model.prun_mask.data)
     return model.prun_mask.data
 
