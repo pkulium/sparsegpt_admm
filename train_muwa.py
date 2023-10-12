@@ -52,7 +52,9 @@ class ADMMCallback(TrainerCallback):
                 module.last_expected_output = None
                 with torch.no_grad():
                     module.prun_mask.data = updated_prun_mask
-                if state.global_step % 10 == 0:
+                if state.global_step % 50 == 0:
+                    print('-' * 64)
+                    print(f'admm loss: {module.prun_mask - module.lora_mask}')
                     print(f'prun mask: {module.prun_mask}')
                     print(f'lora mask: {module.lora_mask}')
                     print(f'admm u:    {admm.ADMM_U[name]}')
