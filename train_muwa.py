@@ -56,7 +56,7 @@ class ADMMCallback(TrainerCallback):
     def update_U(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
-                trainer.admm.ADMM_U[name] = trainer.admm.ADMM_U[name].data.clone() + module.prun_mask.data.clone() - module.lora_mask.data.clone()
+                trainer.admm.ADMM_U[name] = trainer.admm.ADMM_U[name].data + module.prun_mask.data - module.lora_mask.data
 
 class CustomTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
@@ -293,7 +293,7 @@ def pgd_prun_mask(module, module_name, admm):
         mask_optimizer.zero_grad()
         outputs = model.forward(inputs)
         loss = criterion(outputs, targets)  # Compute the loss
-        l1_reg = admm.rho[module_name] / 2 * (admm.ADMM_Z[module_name].prun_mask - lora_mask + admm.ADMM_U[module_name]).norm()
+        l1_reg = admm.rho[module_name] / 2 * (model.prun_mask - lora_mask + admm.ADMM_U[module_name]).norm()
         loss += l1_reg
         loss.backward()
         mask_optimizer.step()
