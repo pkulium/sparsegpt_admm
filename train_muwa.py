@@ -32,11 +32,10 @@ class ADMMCallback(TrainerCallback):
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
         clip_mask(model)
-        self.update_Z(args, state, control, model, **kwargs)
-        self.update_U(args, state, control, model, **kwargs)
         
     def on_epoch_end(self, args, state, control, model=None, **kwargs):
-        print('update_X')
+        self.update_Z(args, state, control, model, **kwargs)
+        self.update_U(args, state, control, model, **kwargs)
         pass
     
     def update_X(self):
@@ -63,7 +62,7 @@ class ADMMCallback(TrainerCallback):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                 trainer.admm.ADMM_U[name] = trainer.admm.ADMM_U[name].data + module.prun_mask.data - module.lora_mask.data
-                trainer.admm.rho[name] *= 1.3
+                # trainer.admm.rho[name] *= 1.3
                 # trainer.admm.ADMM_U[name].clamp_(0, 1.0)
 
 class CustomTrainer(Trainer):
@@ -319,7 +318,7 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--model', type=str, 
-        default = 'facebook/opt-1.3b',
+        default = 'facebook/opt-125m',
         help='OPT model to load; pass `facebook/opt-X`.'
     )
     parser.add_argument(
@@ -394,12 +393,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     model = AutoModelForCausalLM.from_pretrained(
-        "facebook/opt-1.3b", 
+        "facebook/opt-125m", 
         # load_in_8bit=True, 
         device_map='auto',
     )
 
-    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-1.3b")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
     data = load_dataset("databricks/databricks-dolly-15k")
     data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
 
@@ -443,7 +442,7 @@ if __name__ == '__main__':
             per_device_train_batch_size=4, 
             gradient_accumulation_steps=4,
             warmup_steps=100, 
-            num_train_epochs=1,      
+            num_train_epochs=3,      
             # max_steps=10,           
             learning_rate=2e-4, 
             fp16=True,
@@ -457,4 +456,4 @@ if __name__ == '__main__':
     trainer.admm = admm
     model.config.use_cache = False 
     trainer.train(resume_from_checkpoint = False)
-    # model.save_pretrained("lora-muwa-1.3b-opt")
+    # model.save_pretrained("lora-muwa-125m-opt")
