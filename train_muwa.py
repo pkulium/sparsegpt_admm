@@ -144,9 +144,11 @@ class ADMM:
                 self.ADMM_U[name] = m.data.to(dtype=module.weight.dtype, device = module.prun_mask.device)
                 self.ADMM_U[name].requires_grad = False
 
-                self.ADMM_Z[name] = nn.Linear(module.in_features, module.out_features, True)
+                self.ADMM_Z[name] = nn.Linear(module.in_features, module.out_features, True).to(torch.float32)
                 input = layer_calibrations[name[11:]][0].squeeze(0) 
-                output = layer_calibrations[name[11:]][1].squeeze(0) 
+                output = layer_calibrations[name[11:]][1].squeeze(0)
+                input = input.to(torch.float32)  # Convert data to Float
+                output = output.to(torch.float32)  # Now output has shape [2048, 768]
                 from torch.utils.data import TensorDataset, DataLoader
                 dataset = TensorDataset(input, output)
                 train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
