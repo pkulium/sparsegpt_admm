@@ -384,12 +384,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     model = AutoModelForCausalLM.from_pretrained(
-        "facebook/opt-1.3b", 
+        "facebook/opt-125m", 
         # load_in_8bit=True, 
         device_map='auto',
     )
 
-    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-1.3b")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
     data = load_dataset("databricks/databricks-dolly-15k")
     data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
 
@@ -420,7 +420,7 @@ if __name__ == '__main__':
     config = Custom_Config()
     config.model = model 
     config.prune_ratios = 0.5
-    config.rhos = 0.001
+    config.rhos = 0.01
     config.sparsity_type = None
     admm = ADMM(config)
     # Initialize the callback
@@ -433,8 +433,8 @@ if __name__ == '__main__':
             per_device_train_batch_size=4, 
             gradient_accumulation_steps=4,
             warmup_steps=100, 
-            num_train_epochs=3,      
-            # max_steps=20,           
+            # num_train_epochs=3,      
+            max_steps=20,           
             learning_rate=2e-4, 
             fp16=True,
             logging_steps=10, 
