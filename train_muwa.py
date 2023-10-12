@@ -259,6 +259,7 @@ def pgd_prun_mask(module, module_name, admm):
         with torch.no_grad():
             for param in params:
                 param.clamp_(lower, upper)
+    model = admm[module_name]
     with torch.no_grad():
         inputs = module.last_input.clone()
         module.last_input = None
