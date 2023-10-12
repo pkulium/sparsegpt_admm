@@ -49,7 +49,9 @@ class ADMM:
         """          
         self.prune_ratios = config.prune_ratios
         self.rhos = config.rhos
-        
+        def pgd_prun_mask_forward(self, input: torch.Tensor) -> torch.Tensor:
+            return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
+
         self.sparsity_type = config.sparsity_type
         from transformers import transpose
         for name, module in self.model.named_modules():
@@ -59,8 +61,6 @@ class ADMM:
                 self.ADMM_U[name] = m.data.to(module.weight.dtype)
                 self.ADMM_U[name].requires_grad = False
 
-                def pgd_prun_mask_forward(self, input: torch.Tensor) -> torch.Tensor:
-                    return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
                 self.ADMM_Z[name] = nn.Linear(module.in_features, module.in_features, True)
                 self.ADMM_Z[name].prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
                 self.ADMM_Z[name].eval()
@@ -70,6 +70,7 @@ class ADMM:
                     self.ADMM_Z[name].prun_mask.data = module.prun_mask.data.clone()
                     self.ADMM_Z[name].prun_mask.requires_grad = True
                     self.ADMM_Z[name]._linear = pgd_prun_mask_forward.__get__(self.ADMM_Z[name])
+
 def weight_pruning(config,weight,prune_ratio):
      """ 
      weight pruning [irregular,column,filter]
