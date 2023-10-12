@@ -308,6 +308,7 @@ def pgd_prun_mask(module, module_name, admm):
     # _, model.prun_mask.data = get_n_m_sparse_matrix(model.prun_mask.data)
     return model.prun_mask.data
 
+
 if __name__ == '__main__':
     import argparse
     from datautils import *
@@ -390,6 +391,23 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
+    from opt import *
+    model = get_opt(args.model)
+    model.eval()
+
+    dataloader, testloader = get_loaders(
+        args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=model.seqlen
+    )
+
+    if (args.sparsity or args.prunen) and not args.gmp:
+        tick = time.time()
+        opt_sequential(model, dataloader, DEV)
+        for n, p in model.named_parameters():
+            print(n, torch.mean((p == 0).float()))
+            if 'fc2' in n:
+                break
+        print(time.time() - tick)
+    
     model = AutoModelForCausalLM.from_pretrained(
         "facebook/opt-1.3b", 
         # load_in_8bit=True, 
