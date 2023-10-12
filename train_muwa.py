@@ -52,9 +52,10 @@ class ADMMCallback(TrainerCallback):
                 module.last_expected_output = None
                 with torch.no_grad():
                     module.prun_mask.data = updated_prun_mask.clone()
-                print(f'prun mask: {module.prun_mask}')
-                print(f'lora mask: {module.lora_mask}')
-                print(f'admm u:    {admm.ADMM_U[name]}')
+                if state.global_step % 10:
+                    print(f'prun mask: {module.prun_mask}')
+                    print(f'lora mask: {module.lora_mask}')
+                    print(f'admm u:    {admm.ADMM_U[name]}')
 
     def update_U(self, args, state, control, model=None, **kwargs):
         for name, module in model.named_modules():
