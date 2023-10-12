@@ -126,7 +126,9 @@ class ADMM:
         """          
         self.prune_ratios = config.prune_ratios
         self.rhos = config.rhos
-        
+        def pgd_prun_mask_forward(self, input: torch.Tensor) -> torch.Tensor:
+            return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
+
         self.sparsity_type = config.sparsity_type
         for name, module in self.model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
@@ -134,6 +136,16 @@ class ADMM:
                 _, m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask))
                 self.ADMM_U[name] = m.data.to(dtype=module.weight.dtype, device = module.prun_mask.device)
                 self.ADMM_U[name].requires_grad = False
+                self.ADMM_Z[name] = nn.Linear(module.in_features, module.out_features, True)
+                self.ADMM_Z[name].prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
+                self.ADMM_Z[name].eval()
+                with torch.no_grad():
+                    self.ADMM_Z[name].weight.data = module.weight.data.clone()
+                    self.ADMM_Z[name].bias.data = module.bias.data.clone()
+                    self.ADMM_Z[name].prun_mask.data = module.prun_mask.data.clone()
+                    self.ADMM_Z[name].prun_mask.requires_grad = True
+                    self.ADMM_Z[name]._linear = pgd_prun_mask_forward.__get__(self.ADMM_Z[name])
+
 
 def print_trainable_parameters(model):
     """
