@@ -300,6 +300,9 @@ def pgd_prun_mask(module, module_name, admm):
         clip_mask(model)
         # if epoch == 0 or epoch == total_epoch - 1:
             # print(f"Epoch {epoch}, Loss: {loss.item()}")
+    print(f'prun mask: {model.prun_mask}')
+    print(f'lora mask: {lora_mask}')
+    print(f'admm u:    {admm.ADMM_U[module_name]}')
     return model.prun_mask.data
 
 if __name__ == '__main__':
