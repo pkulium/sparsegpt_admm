@@ -142,7 +142,8 @@ class ADMM:
         for name, module in self.model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
                 self.rho[name] = 0.01
-                _, m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask))
+                with torch.no_grad():
+                    m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask))
                 self.ADMM_U[name] = m.data.to(dtype=module.weight.dtype, device = module.prun_mask.device)
                 self.ADMM_U[name].requires_grad = False
 
@@ -239,7 +240,7 @@ def get_n_m_sparse_matrix(w):
     index = torch.argsort(w_tmp, dim=1)[:, :int(M - N)]
     mask = torch.ones(w_tmp.shape, device=w_tmp.device)
     mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape).t()
-    return w * mask, mask
+    return mask
 
 def add_masked_layers(model):
     for name, module in model.named_modules():
@@ -309,7 +310,8 @@ def pgd_prun_mask(module, module_name, admm):
         # if epoch == 0 or epoch == total_epoch - 1:
             # print(f"Epoch {epoch}, Loss: {loss.item()}")
     print(f'sample:{sample}')
-    _, model.prun_mask.data = get_n_m_sparse_matrix(model.prun_mask.data)
+    with torch.no_grad():
+        model.prun_mask.data = get_n_m_sparse_matrix(model.prun_mask.data)
     return model.prun_mask.data
 
 from sparsegpt import *
