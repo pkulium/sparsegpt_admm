@@ -254,23 +254,12 @@ def custom_optimizer(model):
     return optimizer 
 import copy
 def pgd_prun_mask(module, module_name, admm):
-    def pgd_prun_mask_forward(self, input: torch.Tensor) -> torch.Tensor:
-        return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
     def clip_mask(model, lower=0.0, upper=1.0):
         params = [param for name, param in model.named_parameters() if 'prun_mask' in name]
         with torch.no_grad():
             for param in params:
                 param.clamp_(lower, upper)
-    model = nn.Linear(module.in_features, module.in_features, True)
-    model.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
-    model.eval()
     with torch.no_grad():
-        model.weight.data = module.weight.data.clone()
-        model.bias.data = module.bias.data.clone()
-        model.prun_mask.data = module.prun_mask.data.clone()
-        model.prun_mask.requires_grad = True
-        model._linear = pgd_prun_mask_forward.__get__(model)
-
         inputs = module.last_input.clone()
         module.last_input = None
         inputs = inputs.to(model.weight.dtype)
@@ -278,7 +267,6 @@ def pgd_prun_mask(module, module_name, admm):
         module.last_expected_output = None
         targets = targets.to(model.weight.dtype)
         lora_mask = module.lora_mask.clone()
-
 
     criterion = nn.MSELoss()  
     mask_optimizer = torch.optim.AdamW([model.prun_mask], lr=0.01)
@@ -292,7 +280,7 @@ def pgd_prun_mask(module, module_name, admm):
         mask_optimizer.zero_grad()
         outputs = model.forward(inputs)
         loss = criterion(outputs, targets)  # Compute the loss
-        l1_reg = admm.rho[module_name] / 2 * (model.prun_mask - lora_mask + admm.ADMM_U[module_name]).norm()
+        l1_reg = admm.rho[module_name] / 2 * (admm.ADMM_Z[module_name].prun_mask - lora_mask + admm.ADMM_U[module_name]).norm()
         loss += l1_reg
         loss.backward()
         mask_optimizer.step()

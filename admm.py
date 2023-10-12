@@ -51,12 +51,26 @@ class ADMM:
         self.rhos = config.rhos
         
         self.sparsity_type = config.sparsity_type
+        from transformers import transpose
         for name, module in self.model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
                 self.rho[name] = 0.01
                 _, m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask))
                 self.ADMM_U[name] = m.data.to(module.weight.dtype)
                 self.ADMM_U[name].requires_grad = False
+
+                def pgd_prun_mask_forward(self, input: torch.Tensor) -> torch.Tensor:
+                    return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
+                model = nn.Linear(module.in_features, module.in_features, True)
+                model.prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
+                model.eval()
+                with torch.no_grad():
+                    model.weight.data = module.weight.data.clone()
+                    model.bias.data = module.bias.data.clone()
+                    model.prun_mask.data = module.prun_mask.data.clone()
+                    model.prun_mask.requires_grad = True
+                    model._linear = pgd_prun_mask_forward.__get__(model)
+                self.ADMM_Z[name] = model
 
 def weight_pruning(config,weight,prune_ratio):
      """ 
