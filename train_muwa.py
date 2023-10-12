@@ -63,6 +63,7 @@ class ADMMCallback(TrainerCallback):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                 trainer.admm.ADMM_U[name] = trainer.admm.ADMM_U[name].data + module.prun_mask.data - module.lora_mask.data
+                trainer.admm.rho[name] *= 1.3
                 # trainer.admm.ADMM_U[name].clamp_(0, 1.0)
 
 class CustomTrainer(Trainer):
