@@ -383,7 +383,7 @@ def get_layer_calibrations(model, dataloader, dev):
         subset = find_layers(layer)
         
         gpts = {}
-        layer_calibrations[i] = {}
+        layer_calibrations.append({})
         for name in subset:
             if (not (args.minlayer <= i < args.maxlayer and args.prune_only in name)) == (not args.invert):
               continue
