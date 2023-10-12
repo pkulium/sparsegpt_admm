@@ -145,7 +145,13 @@ class ADMM:
                 self.ADMM_U[name].requires_grad = False
 
                 self.ADMM_Z[name] = nn.Linear(module.in_features, module.out_features, True)
-                self.ADMM_Z[name].layer_calibration = layer_calibrations[name[11:]]
+                input = layer_calibrations[name[11:]][0].squeeze(0) 
+                output = layer_calibrations[name[11:]][1].squeeze(0) 
+                from torch.utils.data import TensorDataset, DataLoader
+                dataset = TensorDataset(input, output)
+                train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+                self.ADMM_Z[name].train_loader = train_loader
+
                 self.ADMM_Z[name].prun_mask = nn.Parameter(torch.ones_like(module.weight).to(module.weight.dtype))
                 self.ADMM_Z[name].eval()
                 with torch.no_grad():
@@ -172,9 +178,6 @@ def print_trainable_parameters(model):
 
 def masked_self_forward_linear(self, input: torch.Tensor) -> torch.Tensor:
     if self.prun_masked:
-        with torch.no_grad():
-            self.last_input = input
-            self.last_expected_output = F.linear(input, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
         return F.linear(input, transpose(self.prun_mask * self.weight, self.fan_in_fan_out), bias=self.bias)
     else:
         return F.linear(input, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
@@ -280,31 +283,23 @@ def pgd_prun_mask(module, module_name, admm):
                 param.clamp_(lower, upper)
     model = admm.ADMM_Z[module_name]
     with torch.no_grad():
-        inputs = module.last_input.clone()
-        module.last_input = None
-        inputs = inputs.to(model.weight.dtype)
-        targets = module.last_expected_output.clone()
-        module.last_expected_output = None
-        targets = targets.to(model.weight.dtype)
         lora_mask = module.lora_mask.clone()
 
     criterion = nn.MSELoss()  
     mask_optimizer = torch.optim.AdamW([model.prun_mask], lr=0.01)
-    rho = 0.01  # You can adjust tsshis value to change the strength of the regularization
     total_epoch = 1
     device = 'cuda:0'
     for epoch in range(total_epoch):
-        # for i, (inputs, targets) in enumerate(train_loader):
-        # inputs, targets = inputs.to(device), targets.to(device)
-        # step 2: calculate loss and update the mask values
-        mask_optimizer.zero_grad()
-        outputs = model.forward(inputs)
-        loss = criterion(outputs, targets)  # Compute the loss
-        l1_reg = admm.rho[module_name] / 2 * (model.prun_mask - lora_mask + admm.ADMM_U[module_name]).norm()
-        loss += l1_reg
-        loss.backward()
-        mask_optimizer.step()
-        clip_mask(model)
+        for i, (inputs, targets) in enumerate(admm[module_name].train_loader):
+            inputs, targets = inputs.to(device), targets.to(device)
+            mask_optimizer.zero_grad()
+            outputs = model.forward(inputs)
+            loss = criterion(outputs, targets)  # Compute the loss
+            l1_reg = admm.rho[module_name] / 2 * (model.prun_mask - lora_mask + admm.ADMM_U[module_name]).norm()
+            loss += l1_reg
+            loss.backward()
+            mask_optimizer.step()
+            clip_mask(model)
         # if epoch == 0 or epoch == total_epoch - 1:
             # print(f"Epoch {epoch}, Loss: {loss.item()}")
     # _, model.prun_mask.data = get_n_m_sparse_matrix(model.prun_mask.data)
