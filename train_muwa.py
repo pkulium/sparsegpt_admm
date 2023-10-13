@@ -12,6 +12,7 @@ from admm import Custom_Config, ADMM
 from torch import nn
 from transformers import Trainer
 import pickle
+import tqdm
 
 import os
 os.environ["WANDB_DISABLED"] = "true"
@@ -294,10 +295,8 @@ def pgd_prun_mask(module, module_name, admm):
     mask_optimizer = torch.optim.AdamW([model.prun_mask], lr=0.01)
     total_epoch = 1
     device = 'cuda:0'
-    sample = 0
     for epoch in range(total_epoch):
         for i, (inputs, targets) in enumerate(admm.ADMM_Z[module_name].train_loader):
-            sample += len(inputs)
             inputs, targets = inputs.to(device), targets.to(device)
             mask_optimizer.zero_grad()
             outputs = model.forward(inputs)
@@ -309,7 +308,6 @@ def pgd_prun_mask(module, module_name, admm):
             clip_mask(model)
         # if epoch == 0 or epoch == total_epoch - 1:
             # print(f"Epoch {epoch}, Loss: {loss.item()}")
-    print(f'sample:{sample}')
     with torch.no_grad():
         model.prun_mask.data = get_n_m_sparse_matrix(model.prun_mask.data)
     return model.prun_mask.data
@@ -434,6 +432,35 @@ def get_layer_calibrations(model, dataloader, dev):
     model.config.use_cache = use_cache
     return layer_calibrations
 
+def calc_perplexity(encodings, model, max_length):
+    stride = 512
+    
+    seq_len = encodings.input_ids.size(1)
+    nlls = []
+    prev_end_loc = 0
+    for begin_loc in tqdm(range(0, seq_len, stride)):
+        end_loc = min(begin_loc + max_length, seq_len)
+        trg_len = end_loc - prev_end_loc  # may be different from stride on last loop
+        input_ids = encodings.input_ids[:, begin_loc:end_loc].to(device)
+        target_ids = input_ids.clone()
+        target_ids[:, :-trg_len] = -100
+
+        with torch.no_grad():
+            outputs = model(input_ids, labels=target_ids)
+            # loss is calculated using CrossEntropyLoss which averages over valid labels
+            # N.B. the model only calculates loss over trg_len - 1 labels, because it internally shifts the labels
+            # to the left by 1.
+            neg_log_likelihood = outputs.loss
+
+        nlls.append(neg_log_likelihood)
+
+        prev_end_loc = end_loc
+        if end_loc == seq_len:
+            break
+
+    ppl = torch.exp(torch.stack(nlls).mean())
+    
+    return ppl
 
 if __name__ == '__main__':
     import argparse
@@ -443,7 +470,7 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--model', type=str, 
-        default = 'facebook/opt-1.3b',
+        default = 'facebook/opt-125m',
         help='OPT model to load; pass `facebook/opt-X`.'
     )
     parser.add_argument(
@@ -532,7 +559,7 @@ if __name__ == '__main__':
     #         if 'fc2' in n:
     #             break
     #     print(time.time() - tick)
-    #     with open('layer_calibrations_opt_1.3b', 'wb') as f:
+    #     with open('layer_calibrations_opt_125m', 'wb') as f:
     #         pickle.dump(layer_calibrations, f)
 
     #     del model
@@ -540,16 +567,16 @@ if __name__ == '__main__':
     #     del testloader
     #     del layer_calibrations
 
-    with open('layer_calibrations_opt_1.3b', 'rb') as f:
+    with open('layer_calibrations_opt_125m', 'rb') as f:
         layer_calibrations = pickle.load(f)
 
     model = AutoModelForCausalLM.from_pretrained(
-        "facebook/opt-1.3b", 
+        "facebook/opt-125m", 
         # load_in_8bit=True, 
         device_map='auto',
     )
     
-    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-1.3b")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
     data = load_dataset("databricks/databricks-dolly-15k")
     data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
 
@@ -607,4 +634,15 @@ if __name__ == '__main__':
     trainer.admm = admm
     model.config.use_cache = False 
     trainer.train(resume_from_checkpoint = False)
-    # model.save_pretrained("lora-muwa-1.3b-opt")
+    # model.save_pretrained("lora-muwa-125m-opt")
+
+    model.config.pad_token_id = tokenizer.pad_token_id = 0  # unk
+    model.config.bos_token_id = 1
+    model.config.eos_token_id = tokenizer.eos_token_id
+
+    model.eval()
+    datasets = 'wikitext' 
+    ds = load_dataset("wikitext","wikitext-2-raw-v1", split="test")
+    encodings = tokenizer("\n\n".join(ds["text"]), return_tensors="pt")
+    ppl = calc_perplexity(encodings, model,1024)
+    print(f"wikitext perplexity: {ppl}")
