@@ -243,20 +243,6 @@ def get_n_m_sparse_matrix(w):
     mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape)
     return mask
 
-def create_sparse_mask_rowwise(x):
-    # Create an empty mask with the same shape as x
-    mask = torch.zeros_like(x).to(dtype = x.dtype, device = x.device)
-    
-    # For each row in x
-    for i in range(x.size(0)):
-        # Get the indices of the top 2 absolute values
-        _, indices = torch.topk(torch.abs(x[i, :4]), 2)
-        
-        # Set the corresponding positions in the mask to 1
-        mask[i, indices] = 1
-
-    return mask
-
 def add_masked_layers(model):
     for name, module in model.named_modules():
         if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
@@ -484,7 +470,7 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--model', type=str, 
-        default = 'facebook/opt-1.3b',
+        default = 'facebook/opt-125m',
         help='OPT model to load; pass `facebook/opt-X`.'
     )
     parser.add_argument(
@@ -573,7 +559,7 @@ if __name__ == '__main__':
     #         if 'fc2' in n:
     #             break
     #     print(time.time() - tick)
-    #     with open('layer_calibrations_opt_1.3b', 'wb') as f:
+    #     with open('layer_calibrations_opt_125m', 'wb') as f:
     #         pickle.dump(layer_calibrations, f)
 
     #     del model
@@ -581,16 +567,16 @@ if __name__ == '__main__':
     #     del testloader
     #     del layer_calibrations
 
-    with open('layer_calibrations_opt_1.3b', 'rb') as f:
+    with open('layer_calibrations_opt_125m', 'rb') as f:
         layer_calibrations = pickle.load(f)
 
     model = AutoModelForCausalLM.from_pretrained(
-        "facebook/opt-1.3b", 
+        "facebook/opt-125m", 
         # load_in_8bit=True, 
         device_map='auto',
     )
     
-    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-1.3b")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
     data = load_dataset("databricks/databricks-dolly-15k")
     data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
 
@@ -648,7 +634,7 @@ if __name__ == '__main__':
     trainer.admm = admm
     model.config.use_cache = False 
     trainer.train(resume_from_checkpoint = False)
-    # model.save_pretrained("lora-muwa-1.3b-opt")
+    # model.save_pretrained("lora-muwa-125m-opt")
 
     model.config.pad_token_id = tokenizer.pad_token_id = 0  # unk
     model.config.bos_token_id = 1
