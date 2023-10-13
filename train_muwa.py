@@ -240,7 +240,7 @@ def get_n_m_sparse_matrix(w):
     w_tmp = w.t().detach().abs().reshape(group, M)
     index = torch.argsort(w_tmp, dim=1)[:, :int(M - N)]
     mask = torch.ones(w_tmp.shape, device=w_tmp.device)
-    mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape).t()
+    mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape)
     return mask
 
 def create_sparse_mask_rowwise(x):
