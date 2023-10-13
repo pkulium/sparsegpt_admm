@@ -48,7 +48,7 @@ class ADMMCallback(TrainerCallback):
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                  # apply mask from pgd
                 with torch.no_grad():
-                    module.lora_mask.data = get_n_m_sparse_matrix(module.lora_mask).clone()
+                    module.lora_mask.data = get_n_m_sparse_matrix(module.lora_mask.data)
                 updated_prun_mask = pgd_prun_mask(module, name, admm)
                 module.last_input = None                
                 module.last_expected_output = None
@@ -144,7 +144,7 @@ class ADMM:
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
                 self.rho[name] = 0.01
                 with torch.no_grad():
-                    m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask))
+                    m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask.data))
                 self.ADMM_U[name] = m.data.to(dtype=module.weight.dtype, device = module.prun_mask.device)
                 self.ADMM_U[name].requires_grad = False
 
@@ -234,13 +234,27 @@ def random_binary_tensor(n, m):
     return tensor
 
 def get_n_m_sparse_matrix(w):
-    N, M = 4, 2
+    N, M = 2, 4
     length = w.numel()
     group = int(length / M)
     w_tmp = w.t().detach().abs().reshape(group, M)
     index = torch.argsort(w_tmp, dim=1)[:, :int(M - N)]
     mask = torch.ones(w_tmp.shape, device=w_tmp.device)
     mask = mask.scatter_(dim=1, index=index, value=0).reshape(w.t().shape).t()
+    return mask
+
+def create_sparse_mask_rowwise(x):
+    # Create an empty mask with the same shape as x
+    mask = torch.zeros_like(x)
+    
+    # For each row in x
+    for i in range(x.size(0)):
+        # Get the indices of the top 2 absolute values
+        _, indices = torch.topk(torch.abs(x[i, :4]), 2)
+        
+        # Set the corresponding positions in the mask to 1
+        mask[i, indices] = 1
+
     return mask
 
 def add_masked_layers(model):
