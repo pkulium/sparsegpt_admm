@@ -532,7 +532,7 @@ if __name__ == '__main__':
             if 'fc2' in n:
                 break
         print(time.time() - tick)
-        with open(f'layer_calibrations_{args.model}', 'wb') as f:
+        with open('layer_calibrations_opt_1.3b', 'wb') as f:
             pickle.dump(layer_calibrations, f)
 
         del model
@@ -540,7 +540,7 @@ if __name__ == '__main__':
         del testloader
         del layer_calibrations
 
-    with open(f'layer_calibrations_{args.model}', 'rb') as f:
+    with open('layer_calibrations_opt_1.3b', 'rb') as f:
         layer_calibrations = pickle.load(f)
 
     model = AutoModelForCausalLM.from_pretrained(
