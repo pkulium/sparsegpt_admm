@@ -146,7 +146,6 @@ class ADMM:
                 with torch.no_grad():
                     m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask.data))
                 self.ADMM_U[name] = m.data.to(dtype=module.weight.dtype, device = module.prun_mask.device)
-                self.ADMM_U[name] = torch.zeros_like(module.prun_mask.data).to(dtype=module.weight.dtype, device = module.prun_mask.device)
                 self.ADMM_U[name].requires_grad = False
 
                 self.ADMM_Z[name] = nn.Linear(module.in_features, module.out_features, True).to(torch.float32)
