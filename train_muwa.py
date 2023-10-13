@@ -12,7 +12,7 @@ from admm import Custom_Config, ADMM
 from torch import nn
 from transformers import Trainer
 import pickle
-import tqdm
+from tqdm import tqdm
 
 import os
 os.environ["WANDB_DISABLED"] = "true"
@@ -620,7 +620,7 @@ if __name__ == '__main__':
             per_device_train_batch_size=4, 
             gradient_accumulation_steps=4,
             warmup_steps=100, 
-            num_train_epochs=3,      
+            num_train_epochs=2,      
             # max_steps=10,           
             learning_rate=2e-4, 
             fp16=True,
