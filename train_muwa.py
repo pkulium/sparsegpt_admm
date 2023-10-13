@@ -518,27 +518,27 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     layer_calibrations = None
-    if (args.sparsity or args.prunen) and not args.gmp:
-        model = get_opt(args.model)
-        model.eval()
+    # if (args.sparsity or args.prunen) and not args.gmp:
+    #     model = get_opt(args.model)
+    #     model.eval()
 
-        dataloader, testloader = get_loaders(
-            args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=model.seqlen
-        )
-        tick = time.time()
-        layer_calibrations = get_layer_calibrations(model, dataloader, DEV)
-        for n, p in model.named_parameters():
-            print(n, torch.mean((p == 0).float()))
-            if 'fc2' in n:
-                break
-        print(time.time() - tick)
-        with open('layer_calibrations_opt_125m', 'wb') as f:
-            pickle.dump(layer_calibrations, f)
+    #     dataloader, testloader = get_loaders(
+    #         args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=model.seqlen
+    #     )
+    #     tick = time.time()
+    #     layer_calibrations = get_layer_calibrations(model, dataloader, DEV)
+    #     for n, p in model.named_parameters():
+    #         print(n, torch.mean((p == 0).float()))
+    #         if 'fc2' in n:
+    #             break
+    #     print(time.time() - tick)
+    #     with open('layer_calibrations_opt_125m', 'wb') as f:
+    #         pickle.dump(layer_calibrations, f)
 
-        del model
-        del dataloader
-        del testloader
-        del layer_calibrations
+    #     del model
+    #     del dataloader
+    #     del testloader
+    #     del layer_calibrations
 
     with open('layer_calibrations_opt_125m', 'rb') as f:
         layer_calibrations = pickle.load(f)
