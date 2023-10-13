@@ -470,7 +470,7 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--model', type=str, 
-        default = 'facebook/opt-125m',
+        default = 'facebook/opt-13b',
         help='OPT model to load; pass `facebook/opt-X`.'
     )
     parser.add_argument(
@@ -559,7 +559,7 @@ if __name__ == '__main__':
     #         if 'fc2' in n:
     #             break
     #     print(time.time() - tick)
-    #     with open('layer_calibrations_opt_125m', 'wb') as f:
+    #     with open('layer_calibrations_opt_13b', 'wb') as f:
     #         pickle.dump(layer_calibrations, f)
 
     #     del model
@@ -567,16 +567,16 @@ if __name__ == '__main__':
     #     del testloader
     #     del layer_calibrations
 
-    with open('layer_calibrations_opt_125m', 'rb') as f:
+    with open('layer_calibrations_opt_13b', 'rb') as f:
         layer_calibrations = pickle.load(f)
 
     model = AutoModelForCausalLM.from_pretrained(
-        "facebook/opt-125m", 
+        "facebook/opt-13b", 
         # load_in_8bit=True, 
         device_map='auto',
     )
     
-    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-13b")
     data = load_dataset("databricks/databricks-dolly-15k")
     data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
 
@@ -620,7 +620,7 @@ if __name__ == '__main__':
             per_device_train_batch_size=4, 
             gradient_accumulation_steps=4,
             warmup_steps=100, 
-            num_train_epochs=2,      
+            num_train_epochs=5,      
             # max_steps=10,           
             learning_rate=2e-4, 
             fp16=True,
@@ -634,7 +634,7 @@ if __name__ == '__main__':
     trainer.admm = admm
     model.config.use_cache = False 
     trainer.train(resume_from_checkpoint = False)
-    # model.save_pretrained("lora-muwa-125m-opt")
+    # model.save_pretrained("lora-muwa-13b-opt")
 
     model.config.pad_token_id = tokenizer.pad_token_id = 0  # unk
     model.config.bos_token_id = 1
