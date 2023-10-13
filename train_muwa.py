@@ -234,7 +234,7 @@ def random_binary_tensor(n, m):
     return tensor
 
 def get_n_m_sparse_matrix(w):
-    N, M = 2, 4
+    N, M = 4, 2
     length = w.numel()
     group = int(length / M)
     w_tmp = w.t().detach().abs().reshape(group, M)
