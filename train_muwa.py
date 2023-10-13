@@ -443,7 +443,7 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--model', type=str, 
-        default = 'facebook/opt-125m',
+        default = 'facebook/opt-1.3b',
         help='OPT model to load; pass `facebook/opt-X`.'
     )
     parser.add_argument(
@@ -532,7 +532,7 @@ if __name__ == '__main__':
     #         if 'fc2' in n:
     #             break
     #     print(time.time() - tick)
-    #     with open('layer_calibrations_opt_125m', 'wb') as f:
+    #     with open('layer_calibrations_opt_1.3b', 'wb') as f:
     #         pickle.dump(layer_calibrations, f)
 
     #     del model
@@ -540,16 +540,16 @@ if __name__ == '__main__':
     #     del testloader
     #     del layer_calibrations
 
-    with open('layer_calibrations_opt_125m', 'rb') as f:
+    with open('layer_calibrations_opt_1.3b', 'rb') as f:
         layer_calibrations = pickle.load(f)
 
     model = AutoModelForCausalLM.from_pretrained(
-        "facebook/opt-125m", 
+        "facebook/opt-1.3b", 
         # load_in_8bit=True, 
         device_map='auto',
     )
     
-    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-1.3b")
     data = load_dataset("databricks/databricks-dolly-15k")
     data = data.map(lambda samples: tokenizer(samples['instruction'], max_length=1024, truncation=True), batched=True)
 
@@ -607,4 +607,4 @@ if __name__ == '__main__':
     trainer.admm = admm
     model.config.use_cache = False 
     trainer.train(resume_from_checkpoint = False)
-    # model.save_pretrained("lora-muwa-125m-opt")
+    # model.save_pretrained("lora-muwa-1.3b-opt")
