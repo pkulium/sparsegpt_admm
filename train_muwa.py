@@ -245,7 +245,7 @@ def get_n_m_sparse_matrix(w):
 
 def create_sparse_mask_rowwise(x):
     # Create an empty mask with the same shape as x
-    mask = torch.zeros_like(x).to(x.device)
+    mask = torch.zeros_like(x).to(dtype = x.dtype, device = x.device)
     
     # For each row in x
     for i in range(x.size(0)):
