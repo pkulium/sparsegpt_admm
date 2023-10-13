@@ -47,8 +47,8 @@ class ADMMCallback(TrainerCallback):
         for name, module in model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]: 
                  # apply mask from pgd
-                # with torch.no_grad():
-                    # module.lora_mask.data = get_n_m_sparse_matrix(module.lora_mask.data)
+                with torch.no_grad():
+                    module.lora_mask.data = get_n_m_sparse_matrix(module.lora_mask.data)
                 updated_prun_mask = pgd_prun_mask(module, name, admm)
                 module.last_input = None                
                 module.last_expected_output = None
@@ -142,10 +142,11 @@ class ADMM:
         self.sparsity_type = config.sparsity_type
         for name, module in self.model.named_modules():
             if 'q_proj' in name[-6:] or 'v_proj' in name[-6:]:
-                self.rho[name] = 0.01
+                self.rho[name] = 0.001
                 with torch.no_grad():
                     m = get_n_m_sparse_matrix(torch.rand_like(module.prun_mask.data))
                 self.ADMM_U[name] = m.data.to(dtype=module.weight.dtype, device = module.prun_mask.device)
+                self.ADMM_U[name] = torch.zeros_like(module.prun_mask.data).to(dtype=module.weight.dtype, device = module.prun_mask.device)
                 self.ADMM_U[name].requires_grad = False
 
                 self.ADMM_Z[name] = nn.Linear(module.in_features, module.out_features, True).to(torch.float32)
