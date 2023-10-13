@@ -33,12 +33,11 @@ class ADMMCallback(TrainerCallback):
     
     def on_step_end(self, args, state, control, model=None, **kwargs):
         clip_mask(model)
-        if state.global_step % 100 == 0:
-            self.update_Z(args, state, control, model, **kwargs)
-            self.update_U(args, state, control, model, **kwargs)
+            
         
     def on_epoch_end(self, args, state, control, model=None, **kwargs):
-        pass
+        self.update_Z(args, state, control, model, **kwargs)
+        self.update_U(args, state, control, model, **kwargs)
     
     def update_X(self):
         print('update_X')
