@@ -141,7 +141,7 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
     # Define the optimizer, loss function, and regularization strength
     optimizer = optim.Adam([model.weight], lr=0.01)  # Only optimize the mask
     mse_loss = nn.MSELoss()
-    lambda_sparsity = 0.1  # Regularization strength for sparsity constraint
+    lambda_sparsity = 0.5  # Regularization strength for sparsity constraint
 
     # Assume train_loader is already defined and provides batches of (input, output_a)
     for epoch in range(10):  # Number of epochs
