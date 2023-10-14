@@ -488,7 +488,7 @@ class SparseGPT:
 
         # apply mask from pgd
         out_features, in_features = self.layer.weight.shape
-        model = ProbMaskConv(in_features, out_features, kernel_size=(1, 1), stride=(1, 1), bias=False).to(self.dev)
+        model = ProbMaskConv(in_features, out_features, kernel_size=(1, 1), stride=(1, 1), bias=True).to(self.dev)
         model.weight.data = self.layer.weight.data.clone()
         model.bias.data = self.layer.bias.data.clone()
         input = self.inp1.clone().squeeze(0) 
