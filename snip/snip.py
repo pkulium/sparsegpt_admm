@@ -195,7 +195,7 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
                 model.scores.sub_(v).clamp_(0, 1)
 
         # Print the loss values at the end of each epoch
-        print(f"Epoch {epoch}, MSE Loss: {loss_mse.item()}, Sparsity Constraint: {sparsity_constraint.item()}, Total Loss: {loss.item()}")
+        # print(f"Epoch {epoch}, MSE Loss: {loss_mse.item()}, Sparsity Constraint: {sparsity_constraint.item()}, Total Loss: {loss.item()}")
 
 
 def adjust_learning_rate(optimizer, epoch):
