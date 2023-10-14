@@ -502,15 +502,15 @@ class SparseGPT:
         with torch.enable_grad():
             model0.train()
             VRPEG(model0, 0.5, train_loader, self.dev)
-
+        
         self.layer.weight.data[(model0.weight < 0).int()] = 0
         del model
         del dataset
         del train_loader
 
-        if isinstance(self.layer, transformers.Conv1D):
-            W = W.t()
-        self.layer.weight.data = W.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
+        # if isinstance(self.layer, transformers.Conv1D):
+            # W = W.t()
+        # self.layer.weight.data = W.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
         if DEBUG:
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
     
