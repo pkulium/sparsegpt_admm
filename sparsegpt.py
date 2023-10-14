@@ -505,6 +505,7 @@ class SparseGPT:
             VRPEG(model0, 0.5, train_loader, self.dev)
         
         self.layer.weight.data[(model0.weight <= 0).int()] = 0
+        print((model0.weight <= 0).int())
         del model
         del dataset
         del train_loader
