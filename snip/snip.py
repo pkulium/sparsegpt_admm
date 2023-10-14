@@ -132,38 +132,36 @@ def PGD(net, keep_ratio, train_dataloader, device):
     keep_masks = net.weight_mask > acceptable_score
     return keep_masks
 
-# import torch.optim as optim
-# def VRPEG(model, keep_ratio, train_dataloader, device):
-#    # Define the optimizer, you can use any optimizer of your choice
-#     import torch.optim as optim
-#     model.linear.weight.requires_grad = False
-#     if model.linear.bias is not None:
-#         model.linear.bias.requires_grad = False
+import torch.optim as optim
+def VRPEG(model, keep_ratio, train_dataloader, device):
+   # Define the optimizer, you can use any optimizer of your choice
+    import torch.optim as optim
+    model.linear.weight.requires_grad = True
 
-#     # Define the optimizer, loss function, and regularization strength
-#     optimizer = optim.Adam([model.mask], lr=0.01)  # Only optimize the mask
-#     mse_loss = nn.MSELoss()
-#     lambda_sparsity = 0.1  # Regularization strength for sparsity constraint
+    # Define the optimizer, loss function, and regularization strength
+    optimizer = optim.Adam([model.weight], lr=0.01)  # Only optimize the mask
+    mse_loss = nn.MSELoss()
+    lambda_sparsity = 0.1  # Regularization strength for sparsity constraint
 
-#     # Assume train_loader is already defined and provides batches of (input, output_a)
-#     for epoch in range(100):  # Number of epochs
-#         for input_tensor, label in train_dataloader:  # label is output_a
-#             optimizer.zero_grad()
+    # Assume train_loader is already defined and provides batches of (input, output_a)
+    for epoch in range(10):  # Number of epochs
+        for input_tensor, label in train_dataloader:  # label is output_a
+            optimizer.zero_grad()
             
-#             # Forward pass
-#             output_model = model(input_tensor)
+            # Forward pass
+            output_model = model(input_tensor)
             
-#             # Compute the loss
-#             loss_mse = mse_loss(output_model, label)  # Compare output_model with label (output_a)
-#             sparsity_constraint = lambda_sparsity * torch.abs(torch.sum(torch.sigmoid(model.mask)) - 0.5 * model.mask.numel())
-#             loss = loss_mse + sparsity_constraint
+            # Compute the loss
+            loss_mse = mse_loss(output_model, label)  # Compare output_model with label (output_a)
+            sparsity_constraint = lambda_sparsity * torch.abs(torch.sum(model.weight) - 0.5 * model.weight.numel())
+            loss = loss_mse + sparsity_constraint
             
-#             # Backward pass and optimization
-#             loss.backward()
-#             optimizer.step()
+            # Backward pass and optimization
+            loss.backward()
+            optimizer.step()
             
-#         # Print the loss values at the end of each epoch
-#         print(f"Epoch {epoch}, MSE Loss: {loss_mse.item()}, Sparsity Constraint: {sparsity_constraint.item()}, Total Loss: {loss.item()}")
+        # Print the loss values at the end of each epoch
+        print(f"Epoch {epoch}, MSE Loss: {loss_mse.item()}, Sparsity Constraint: {sparsity_constraint.item()}, Total Loss: {loss.item()}")
 
 
 def adjust_learning_rate(optimizer, epoch):
@@ -176,74 +174,74 @@ def adjust_learning_rate(optimizer, epoch):
         else: break
     for param_group in optimizer.param_groups: param_group['lr'] = lr
 
-import torch.optim as optim
-def VRPEG(model, keep_ratio, train_dataloader, device):
-    epochs = 85
-    final_temp = 200
-    iters_per_reset = epochs-1
-    lr = 0.1
-    decay = 0.0001
-    rounds = 3
-    rewind_epoch = 2
-    lmbda = 1e-8
+# import torch.optim as optim
+# def VRPEG(model, keep_ratio, train_dataloader, device):
+#     epochs = 85
+#     final_temp = 200
+#     iters_per_reset = epochs-1
+#     lr = 0.1
+#     decay = 0.0001
+#     rounds = 3
+#     rewind_epoch = 2
+#     lmbda = 1e-8
 
-    temp_increase = final_temp**(1./iters_per_reset)
+#     temp_increase = final_temp**(1./iters_per_reset)
 
-    trainable_params = filter(lambda p: p.requires_grad, model.parameters())
-    num_params = sum([p.numel() for p in trainable_params])
-    print("Total number of parameters: {}".format(num_params))
+#     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
+#     num_params = sum([p.numel() for p in trainable_params])
+#     print("Total number of parameters: {}".format(num_params))
 
-    # weight_params = map(lambda a: a[1], filter(lambda p: p[1].requires_grad and 'mask' not in p[0], model.named_parameters()))
-    # mask_params = map(lambda a: a[1], filter(lambda p: p[1].requires_grad and 'mask' in p[0], model.named_parameters()))
-    weight_params = [model.weight, model.bias]
-    mask_params = [model.mask_weight]
+#     # weight_params = map(lambda a: a[1], filter(lambda p: p[1].requires_grad and 'mask' not in p[0], model.named_parameters()))
+#     # mask_params = map(lambda a: a[1], filter(lambda p: p[1].requires_grad and 'mask' in p[0], model.named_parameters()))
+#     weight_params = [model.weight, model.bias]
+#     mask_params = [model.mask_weight]
 
-    model.ticket = False
-    weight_optim = optim.SGD(weight_params, lr=lr, momentum=0.9, nesterov=True, weight_decay=decay)
-    mask_optim = optim.SGD(mask_params, lr=lr, momentum=0.9, nesterov=True)
-    optimizers = [weight_optim, mask_optim]
-    criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
-    for outer_round in range(rounds):
-        model.temp = 1
-        print('--------- Round {} -----------'.format(outer_round))
-        for epoch in range(epochs):
-            # print('\t--------- Epoch {} -----------'.format(epoch))
-            model.train()
-            if epoch > 0: model.temp *= temp_increase  
-            if outer_round == 0 and epoch == rewind_epoch: model.checkpoint()
-            for optimizer in optimizers: adjust_learning_rate(optimizer, epoch)
+#     model.ticket = False
+#     weight_optim = optim.SGD(weight_params, lr=lr, momentum=0.9, nesterov=True, weight_decay=decay)
+#     mask_optim = optim.SGD(mask_params, lr=lr, momentum=0.9, nesterov=True)
+#     optimizers = [weight_optim, mask_optim]
+#     criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
+#     for outer_round in range(rounds):
+#         model.temp = 1
+#         print('--------- Round {} -----------'.format(outer_round))
+#         for epoch in range(epochs):
+#             # print('\t--------- Epoch {} -----------'.format(epoch))
+#             model.train()
+#             if epoch > 0: model.temp *= temp_increase  
+#             if outer_round == 0 and epoch == rewind_epoch: model.checkpoint()
+#             for optimizer in optimizers: adjust_learning_rate(optimizer, epoch)
 
-            for batch_idx, (data, target) in enumerate(train_dataloader):
-                data, target = data.to(device), target.to(device)
-                for optimizer in optimizers: optimizer.zero_grad()
-                output = model(data)
-                masks = [model.mask_weight]
-                entries_sum = sum(m.sum() for m in masks)
-                loss = criterion(output, target) + lmbda * entries_sum
-                loss.backward()
-                for optimizer in optimizers: optimizer.step()
-        if outer_round != rounds-1: model.prune(model.temp)
+#             for batch_idx, (data, target) in enumerate(train_dataloader):
+#                 data, target = data.to(device), target.to(device)
+#                 for optimizer in optimizers: optimizer.zero_grad()
+#                 output = model(data)
+#                 masks = [model.mask_weight]
+#                 entries_sum = sum(m.sum() for m in masks)
+#                 loss = criterion(output, target) + lmbda * entries_sum
+#                 loss.backward()
+#                 for optimizer in optimizers: optimizer.step()
+#         if outer_round != rounds-1: model.prune(model.temp)
 
-    print('--------- Training final ticket -----------')
-    optimizers = [optim.SGD(weight_params, lr=lr, momentum=0.9, nesterov=True, weight_decay=decay)]
-    model.ticket = True
-    model.rewind_weights()
+#     print('--------- Training final ticket -----------')
+#     optimizers = [optim.SGD(weight_params, lr=lr, momentum=0.9, nesterov=True, weight_decay=decay)]
+#     model.ticket = True
+#     model.rewind_weights()
 
 
-    for epoch in range(epochs):
-        # print('\t--------- Epoch {} -----------'.format(epoch))
-        model.train()
-        if epoch > 0: model.temp *= temp_increase  
-        if outer_round == 0 and epoch == rewind_epoch: model.checkpoint()
-        for optimizer in optimizers: adjust_learning_rate(optimizer, epoch)
+#     for epoch in range(epochs):
+#         # print('\t--------- Epoch {} -----------'.format(epoch))
+#         model.train()
+#         if epoch > 0: model.temp *= temp_increase  
+#         if outer_round == 0 and epoch == rewind_epoch: model.checkpoint()
+#         for optimizer in optimizers: adjust_learning_rate(optimizer, epoch)
 
-        for batch_idx, (data, target) in enumerate(train_dataloader):
-            data, target = data.to(device), target.to(device)
-            for optimizer in optimizers: optimizer.zero_grad()
-            output = model(data)
-            masks = [model.mask_weight]
-            entries_sum = sum(m.sum() for m in masks)
-            loss = criterion(output, target) + lmbda * entries_sum
-            loss.backward()
-            for optimizer in optimizers: optimizer.step()
-    return model.mask
+#         for batch_idx, (data, target) in enumerate(train_dataloader):
+#             data, target = data.to(device), target.to(device)
+#             for optimizer in optimizers: optimizer.zero_grad()
+#             output = model(data)
+#             masks = [model.mask_weight]
+#             entries_sum = sum(m.sum() for m in masks)
+#             loss = criterion(output, target) + lmbda * entries_sum
+#             loss.backward()
+#             for optimizer in optimizers: optimizer.step()
+#     return model.mask

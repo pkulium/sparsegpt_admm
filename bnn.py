@@ -113,7 +113,36 @@ class CustomTrainer(Trainer):
         loss += admm_loss
         # print(f'loss admm {admm_loss}')
         return (loss, outputs) if return_outputs else loss
+    
+def Binarize(tensor,quant_mode='det'):
+    if quant_mode=='det':
+        # return tensor.sign()
+        return (tensor > 0).float()
+    if quant_mode=='bin':
+        return (tensor>=0).type(type(tensor))*2-1
+    else:
+        return tensor.add_(1).div_(2).add_(torch.rand(tensor.size()).add(-0.5)).clamp_(0,1).round().mul_(2).add_(-1)
+    
+from torch.nn.functional import linear, conv2d
+class BNNLinear(nn.Linear):
 
+    def __init__(self, *kargs, **kwargs):
+        super(BNNLinear, self).__init__(*kargs, **kwargs)
+        self.register_buffer('weight_org', self.weight.data.clone())
+
+    def forward(self, input):
+
+        if (input.size(1) != 784) and (input.size(1) != 3072):
+            input.data=Binarize(input.data)
+            
+        self.weight.data=Binarize(self.weight_org)
+        out = linear(input , self.weight * self.layer)
+
+        if not self.layer.bias is None:
+            out += self.layer.bias.view(1, -1).expand_as(out)
+
+        return out
+    
 class Custom_Config:
     pass
 
@@ -280,6 +309,11 @@ def custom_optimizer(model):
     # Use AdamW for the special_param
     optimizer = transformers.AdamW(param_groups)
     return optimizer 
+
+def sparse_loss(mask):
+    for i in range(mask.shape[0]):
+        for j in range(mask.shape[1]):
+            
 import copy
 def pgd_prun_mask(module, module_name, admm):
     def clip_mask(model, lower=0.0, upper=1.0):

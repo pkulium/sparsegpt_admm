@@ -17,6 +17,35 @@ from snip.snip import *
 from snip.train import *
 from sparse_op import *
 
+def Binarize(tensor,quant_mode='det'):
+    if quant_mode=='det':
+        # return tensor.sign()
+        return (tensor > 0).float()
+    if quant_mode=='bin':
+        return (tensor>=0).type(type(tensor))*2-1
+    else:
+        return tensor.add_(1).div_(2).add_(torch.rand(tensor.size()).add(-0.5)).clamp_(0,1).round().mul_(2).add_(-1)
+    
+from torch.nn.functional import linear, conv2d
+class BNNLinear(nn.Linear):
+
+    def __init__(self, *kargs, **kwargs):
+        super(BNNLinear, self).__init__(*kargs, **kwargs)
+        self.register_buffer('weight_org', self.weight.data.clone())
+
+    def forward(self, input):
+
+        if (input.size(1) != 784) and (input.size(1) != 3072):
+            input.data=Binarize(input.data)
+            
+        self.weight.data=Binarize(self.weight_org)
+        out = linear(input , self.weight * self.layer)
+
+        if not self.layer.bias is None:
+            out += self.layer.bias.view(1, -1).expand_as(out)
+
+        return out
+
 class SparseGPT:
 
     def __init__(self, layer):
@@ -450,27 +479,12 @@ class SparseGPT:
 
         tick = time.time()
 
-        H = self.H
         del self.H
-        dead = torch.diag(H) == 0
-        H[dead, dead] = 1
-        W[:, dead] = 0
-
-        Losses = torch.zeros(self.rows, device=self.dev)
-
-        damp = percdamp * torch.mean(torch.diag(H))
-        diag = torch.arange(self.columns, device=self.dev)
-        H[diag, diag] += damp
-        H = torch.linalg.cholesky(H)
-        H = torch.cholesky_inverse(H)
-        H = torch.linalg.cholesky(H, upper=True)
-        Hinv = H
-
         mask = None
 
         # apply mask from pgd
         out_features, in_features = self.layer.weight.shape
-        model = SoftMaskedLinear(in_features=in_features, out_features=out_features).to(self.dev)
+        model = nn.Linear(in_features=in_features, out_features=out_features, bias=True).to(self.dev)
         model.weight.data = self.layer.weight.data.clone()
         model.bias.data = self.layer.bias.data.clone()
         input = self.inp1.clone().squeeze(0) 
@@ -480,76 +494,19 @@ class SparseGPT:
         output = output.to(torch.float32)  # Now output has shape [2048, 768]
         model = model.to(torch.float32)  # Convert model parameters to Float
 
+        model0 = BNNLinear(in_features=in_features, out_features=out_features, bias = False).to(self.dev)
+        model0.layer = model
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
         train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
         with torch.enable_grad():
-            model.train()
-            mask = VRPEG(model, 0.5, train_loader, self.dev)
-            print(f'shape1 {torch.sum(mask) / int(model.weight.numel())}')
-        self.layer.weight.data[~mask] = 0
+            model0.train()
+            VRPEG(model0, 0.5, train_loader, self.dev)
+
+        self.layer.weight.data[~model0.weight] = 0
         del model
         del dataset
         del train_loader
-        return
-        
-        for i1 in range(0, self.columns, blocksize):
-            i2 = min(i1 + blocksize, self.columns)
-            count = i2 - i1
-
-            W1 = W[:, i1:i2].clone()
-            Q1 = torch.zeros_like(W1)
-            Err1 = torch.zeros_like(W1)
-            Losses1 = torch.zeros_like(W1)
-            Hinv1 = Hinv[i1:i2, i1:i2]
-
-            if prunen == 0: 
-                if mask is not None:
-                    mask1 = mask[:, i1:i2]
-                else:
-                    tmp = W1 ** 2 / (torch.diag(Hinv1).reshape((1, -1))) ** 2
-                    thresh = torch.sort(tmp.flatten())[0][int(tmp.numel() * sparsity)]
-                    mask1 = tmp <= thresh
-            else:
-                mask1 = torch.zeros_like(W1) == 1
-
-            for i in range(count):
-                w = W1[:, i]
-                d = Hinv1[i, i]
-
-                if prunen != 0 and i % prunem == 0:
-                    tmp = W1[:, i:(i + prunem)] ** 2 / (torch.diag(Hinv1)[i:(i + prunem)].reshape((1, -1))) ** 2
-                    mask1.scatter_(1, i + torch.topk(tmp, prunen, dim=1, largest=False)[1], True)
-
-                q = w.clone()
-                q[mask1[:, i]] = 0
-
-                if hasattr(self, 'quantizer'):
-                    q = quantize(
-                        q.unsqueeze(1), self.quantizer.scale, self.quantizer.zero, self.quantizer.maxq
-                    ).flatten()
-
-                Q1[:, i] = q
-                Losses1[:, i] = (w - q) ** 2 / d ** 2
-
-                err1 = (w - q) / d
-                W1[:, i:] -= err1.unsqueeze(1).matmul(Hinv1[i, i:].unsqueeze(0))
-                Err1[:, i] = err1
-
-            W[:, i1:i2] = Q1
-            Losses += torch.sum(Losses1, 1) / 2
-
-            W[:, i2:] -= Err1.matmul(Hinv[i1:i2, i2:])
-
-            if DEBUG:
-                self.layer.weight.data[:, :i2] = W[:, :i2]
-                self.layer.weight.data[:, i2:] = W[:, i2:]
-                print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
-                print(torch.sum(Losses))
-
-        torch.cuda.synchronize()
-        print('time %.2f' % (time.time() - tick))
-        print('error', torch.sum(Losses).item())
 
         if isinstance(self.layer, transformers.Conv1D):
             W = W.t()
