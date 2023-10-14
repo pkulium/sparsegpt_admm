@@ -39,7 +39,7 @@ class BNNLinear(nn.Linear):
             input.data=Binarize(input.data)
             
         self.weight.data=Binarize(self.weight_org)
-        out = linear(input , self.weight * self.layer)
+        out = linear(input , self.weight * self.layer.weight)
 
         if not self.layer.bias is None:
             out += self.layer.bias.view(1, -1).expand_as(out)
