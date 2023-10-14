@@ -160,7 +160,9 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
             
             # Backward pass and optimization
             loss.backward()
+            model.weight.data.copy_(model.weight_org)
             optimizer.step()
+            model.weight_org.data.copy_(model.weight.data.clamp_(-1,1))
             
         # Print the loss values at the end of each epoch
         print(f"Epoch {epoch}, MSE Loss: {loss_mse.item()}, Sparsity Constraint: {sparsity_constraint.item()}, Total Loss: {loss.item()}")
