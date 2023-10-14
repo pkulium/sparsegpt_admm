@@ -17,34 +17,38 @@ from snip.snip import *
 from snip.train import *
 from sparse_op import *
 
-def Binarize(tensor,quant_mode='det'):
-    if quant_mode=='det':
-        # return tensor.sign()
-        return (tensor > 0).float()
-    if quant_mode=='bin':
-        return (tensor>=0).type(type(tensor))*2-1
-    else:
-        return tensor.add_(1).div_(2).add_(torch.rand(tensor.size()).add(-0.5)).clamp_(0,1).round().mul_(2).add_(-1)
-    
-from torch.nn.functional import linear, conv2d
-class BNNLinear(nn.Linear):
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
-    def __init__(self, *kargs, **kwargs):
-        super(BNNLinear, self).__init__(*kargs, **kwargs)
-        self.register_buffer('weight_org', self.weight.data.clone())
+import math
 
-    def forward(self, input):
+DenseConv = nn.Conv2d
 
-        if (input.size(1) != 784) and (input.size(1) != 3072):
-            input.data=Binarize(input.data)
-            
-        self.weight.data=Binarize(self.weight_org)
-        out = linear(input , self.weight * self.layer.weight)
+class ProbMaskConv(nn.Conv2d):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.scores = nn.Parameter(torch.Tensor(self.weight.size()))  #Probability
+        self.subnet = None                                            #Mask
+        self.train_weights = False
+        nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
 
-        if not self.layer.bias is None:
-            out += self.layer.bias.view(1, -1).expand_as(out)
+    @property
+    def clamped_scores(self):
+        return self.scores
 
-        return out
+    def fix_subnet(self):
+        self.subnet = (torch.rand_like(self.scores) < self.clamped_scores).float()
+
+    def forward(self, x):
+        if not self.train_weights:                                      
+            self.subnet = (torch.rand_like(self.scores) < self.clamped_scores).float()
+            w = self.weight * self.subnet
+            x = F.conv2d(x, w, self.bias, self.stride, self.padding, self.dilation, self.groups)
+        else:                                                           #testing
+            w = self.weight * self.subnet
+            x = F.conv2d(x, w, self.bias, self.stride, self.padding, self.dilation, self.groups)
+        return x
 
 class SparseGPT:
 
@@ -484,7 +488,7 @@ class SparseGPT:
 
         # apply mask from pgd
         out_features, in_features = self.layer.weight.shape
-        model = nn.Linear(in_features=in_features, out_features=out_features, bias=True).to(self.dev)
+        model = ProbMaskConv(in_features, out_features, kernel_size=(1, 1), stride=(1, 1), first_layer=False).to(self.dev)
         model.weight.data = self.layer.weight.data.clone()
         model.bias.data = self.layer.bias.data.clone()
         input = self.inp1.clone().squeeze(0) 
@@ -494,18 +498,13 @@ class SparseGPT:
         output = output.to(torch.float32)  # Now output has shape [2048, 768]
         model = model.to(torch.float32)  # Convert model parameters to Float
 
-        model0 = BNNLinear(in_features=in_features, out_features=out_features, bias = False).to(self.dev)
-        model0.layer = model
-        nn.init.normal_(model0.weight, 0, 0.01)
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
         train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
         with torch.enable_grad():
-            model0.train()
-            VRPEG(model0, 0.5, train_loader, self.dev)
+            model.train()
+            VRPEG(model, 0.5, train_loader, self.dev)
         
-        self.layer.weight.data[(model0.weight <= 0).int()] = 0
-        print((model0.weight <= 0).int())
         del model
         del dataset
         del train_loader

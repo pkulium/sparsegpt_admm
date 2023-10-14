@@ -135,15 +135,42 @@ def PGD(net, keep_ratio, train_dataloader, device):
 import torch.optim as optim
 def VRPEG(model, keep_ratio, train_dataloader, device):
    # Define the optimizer, you can use any optimizer of your choice
+    def solve_v_total(model, total):
+        k = total * 0.5
+        a, b = 0, 0
+        b = max(b, model.scores.max())
+        def f(v):
+            s = 0
+            s += (model.scores - v).clamp(0, 1).sum()
+            return s - k
+        if f(0) < 0:
+            return 0
+        itr = 0
+        while (1):
+            itr += 1
+            v = (a + b) / 2
+            obj = f(v)
+            if abs(obj) < 1e-3 or itr > 20:
+                break
+            if obj < 0:
+                b = v
+            else:
+                a = v
+        v = max(0, v)
+        return v
+    
     import torch.optim as optim
-    model.weight.requires_grad = True
-    model.layer.weight.requires_grad = False
-    model.layer.bias.requires_grad = False
+    model.train_weights = False
 
     # Define the optimizer, loss function, and regularization strength
-    optimizer = optim.Adam([model.weight], lr=0.1)  # Only optimize the mask
+    parameters = list(model.named_parameters())
+    # weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
+    score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
+    optimizer = torch.optim.Adam(
+        score_params, lr=0.01, weight_decay=1e-4
+    )
     mse_loss = nn.MSELoss()
-    lambda_sparsity = 1  # Regularization strength for sparsity constraint
+    # lambda_sparsity = 0.1  # Regularization strength for sparsity constraint
 
     # Assume train_loader is already defined and provides batches of (input, output_a)
     for epoch in range(10):  # Number of epochs
@@ -155,15 +182,18 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
             
             # Compute the loss
             loss_mse = mse_loss(output_model, label)  # Compare output_model with label (output_a)
-            sparsity_constraint = lambda_sparsity * torch.abs(torch.sum(model.weight) - 0.5 * model.weight.numel())
-            loss = loss_mse + sparsity_constraint
+            # sparsity_constraint = lambda_sparsity * torch.abs(torch.sum(model.weight) - 0.5 * model.weight.numel())
+            # loss = loss_mse + sparsity_constraint
             
             # Backward pass and optimization
-            loss.backward()
-            model.weight.data.copy_(model.weight_org)
+            loss_mse.backward()
             optimizer.step()
-            model.weight_org.data.copy_(model.weight.data.clamp_(0,1))
-            
+
+            with torch.no_grad():
+                total = model.scores.nelement()
+                v = solve_v_total(model, total)
+                model.scores.sub_(v).clamp_(0, 1)
+
         # Print the loss values at the end of each epoch
         print(f"Epoch {epoch}, MSE Loss: {loss_mse.item()}, Sparsity Constraint: {sparsity_constraint.item()}, Total Loss: {loss.item()}")
 
