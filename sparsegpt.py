@@ -503,7 +503,7 @@ class SparseGPT:
             model0.train()
             VRPEG(model0, 0.5, train_loader, self.dev)
         
-        self.layer.weight.data[(model0.weight < 0).int()] = 0
+        self.layer.weight.data[(model0.weight <= 0).int()] = 0
         del model
         del dataset
         del train_loader
