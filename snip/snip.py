@@ -136,7 +136,7 @@ import torch.optim as optim
 def VRPEG(model, keep_ratio, train_dataloader, device):
    # Define the optimizer, you can use any optimizer of your choice
     import torch.optim as optim
-    model.linear.weight.requires_grad = True
+    model.weight.requires_grad = True
 
     # Define the optimizer, loss function, and regularization strength
     optimizer = optim.Adam([model.weight], lr=0.01)  # Only optimize the mask
