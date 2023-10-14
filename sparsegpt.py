@@ -496,6 +496,7 @@ class SparseGPT:
 
         model0 = BNNLinear(in_features=in_features, out_features=out_features, bias = False).to(self.dev)
         model0.layer = model
+        nn.init.normal_(model0.weight, 0, 0.01)
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
         train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
