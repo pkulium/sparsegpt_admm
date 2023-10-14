@@ -25,7 +25,7 @@ import math
 
 DenseConv = nn.Conv2d
 
-class ProbMaskConv(nn.Conv2d):
+class ProbMaskLinear(nn.Linear):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.scores = nn.Parameter(torch.Tensor(self.weight.size()))  #Probability
@@ -44,10 +44,10 @@ class ProbMaskConv(nn.Conv2d):
         if not self.train_weights:                                      
             self.subnet = (torch.rand_like(self.scores) < self.clamped_scores).float()
             w = self.weight * self.subnet
-            x = F.conv2d(x, w, self.bias, self.stride, self.padding, self.dilation, self.groups)
+            x = F.linear(x, w, self.bias)
         else:                                                           #testing
             w = self.weight * self.subnet
-            x = F.conv2d(x, w, self.bias, self.stride, self.padding, self.dilation, self.groups)
+            x = F.linear(x, w, self.bias)
         return x
 
 class SparseGPT:
@@ -488,7 +488,7 @@ class SparseGPT:
 
         # apply mask from pgd
         out_features, in_features = self.layer.weight.shape
-        model = ProbMaskConv(in_features, out_features, kernel_size=(1, 1), stride=(1, 1), bias=True).to(self.dev)
+        model = ProbMaskLinear(in_features, out_features, bias=True).to(self.dev)
         model.weight.data = self.layer.weight.data.clone()
         model.bias.data = self.layer.bias.data.clone()
         input = self.inp1.clone().squeeze(0) 
