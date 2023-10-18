@@ -127,7 +127,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
             loss.backward()
             mask_optimizer.step()
             clip_mask(net)
-            net.weight_org.data.copy_(net.weight.data.clamp_(0,1))
+            net.weight_org.data.copy_(net.weight.data.clamp_(-1,1))
         if epoch == 0 or epoch == total_epoch - 1:
             print(f"Epoch {epoch}, Loss: {loss.item()}")
     
