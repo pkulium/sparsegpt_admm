@@ -393,7 +393,9 @@ class SparseGPT:
         out_features, in_features = self.layer.weight.shape
         model = BNNLinear(in_features = in_features, out_features = out_features, bias = False).to(self.layer.weight.device)
         model.weight_old = self.layer.weight.data
-        nn.init.kaiming_normal_(model.weight, mode='fan_out')
+        # nn.init.kaiming_normal_(model.weight, mode='fan_out')
+        nn.init.xavier_normal_(model.weight)
+
 
         input = self.inp1.clone().squeeze(0) 
         output = self.out1.clone().squeeze(0) 
