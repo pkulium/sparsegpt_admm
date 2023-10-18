@@ -100,28 +100,28 @@ def PGD(net, keep_ratio, train_dataloader, device):
     # Monkey-patch the Linear and Conv2d layer to learn the multiplicative mask
     # instead of the weights
 
-    # for layer in net.modules():
-    #     if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-    #         layer.weight_mask = nn.Parameter(torch.zeros_like(layer.weight))
-    #         # nn.init.xavier_normal_(layer.weight_mask)
-    #         nn.init.constant_(layer.weight_mask, keep_ratio)
-    #         layer.weight.requires_grad = False
-    #         layer.bias.requires_grad = False
+    for layer in net.modules():
+        if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+            layer.weight_mask = nn.Parameter(torch.zeros_like(layer.weight))
+            # nn.init.xavier_normal_(layer.weight_mask)
+            nn.init.constant_(layer.weight_mask, keep_ratio)
+            layer.weight.requires_grad = False
+            layer.bias.requires_grad = False
             
 
-    #     # Override the forward methods:
-    #     if isinstance(layer, nn.Conv2d):
-    #         layer.forward = types.MethodType(snip_forward_conv2d, layer)
+        # Override the forward methods:
+        if isinstance(layer, nn.Conv2d):
+            layer.forward = types.MethodType(snip_forward_conv2d, layer)
 
-    #     if isinstance(layer, nn.Linear):
-    #         layer.forward = types.MethodType(snip_forward_linear, layer)
+        if isinstance(layer, nn.Linear):
+            layer.forward = types.MethodType(snip_forward_linear, layer)
 
     # W_metric = torch.abs(net.weight.data)
     # thresh = torch.sort(W_metric.flatten().cuda())[0][int(net.weight.numel()*keep_ratio)].cpu()
     # W_mask = (W_metric<=thresh).int()
     criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
-    # mask_optimizer = torch.optim.SGD([net.weight_mask], lr=0.001, momentum=0.9)
-    mask_optimizer = torch.optim.AdamW([net.weight], lr=0.1)
+    mask_optimizer = torch.optim.SGD([net.weight_mask], lr=0.001, momentum=0.9)
+    # mask_optimizer = torch.optim.AdamW([net.weight], lr=0.1)
     rho = 0.01  # You can adjust tsshis value to change the strength of the regularization
     total_epoch = 1000
     total_param = net.weight.shape[0] * net.weight.shape[1]
@@ -131,7 +131,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
 
             # step 2: calculate loss and update the mask values
             mask_optimizer.zero_grad()
-            net.weight.data.copy_(net.weight_org)
+            # net.weight.data.copy_(net.weight_org)
             outputs = net.forward(inputs)
             loss = criterion(outputs, targets)  # Compute the loss
             loss_reg = sparsity_loss(net.weight)
@@ -139,7 +139,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
             loss.backward()
             mask_optimizer.step()
             clip_mask(net)
-            net.weight_org.data.copy_(net.weight.data.clamp_(0,1))
+            # net.weight_org.data.copy_(net.weight.data.clamp_(0,1))
         if epoch % 10 == 0:
             print(f"Epoch {epoch}, Loss: {loss.item()}")
     
