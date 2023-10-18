@@ -77,6 +77,19 @@ def SNIP(net, keep_ratio, train_dataloader, device):
 
     return(keep_masks)
 
+def sparsity_loss(tensor):
+    # Reshape tensor to expose each chunk of 4 as a separate row
+    reshaped = tensor.view(-1, 4)
+    
+    # Calculate the sum along each row (i.e., chunk) and compute the loss for each
+    chunk_sums = torch.sum(reshaped, dim=1)
+    loss_vector = torch.abs(chunk_sums - 2)  # Loss for each chunk of 4
+
+    # Sum up all individual chunk losses
+    total_loss = torch.sum(loss_vector)
+
+    return total_loss
+
 
 def PGD(net, keep_ratio, train_dataloader, device):
 
@@ -121,9 +134,8 @@ def PGD(net, keep_ratio, train_dataloader, device):
             net.weight.data.copy_(net.weight_org)
             outputs = net.forward(inputs)
             loss = criterion(outputs, targets)  # Compute the loss
-            print(net.weight)
-            l1_reg = rho / 2 * torch.sum(torch.abs(net.weight))
-            loss += l1_reg
+            loss_reg = sparsity_loss(net.weight)
+            loss += loss_reg
             loss.backward()
             mask_optimizer.step()
             clip_mask(net)
