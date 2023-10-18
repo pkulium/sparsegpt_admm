@@ -121,6 +121,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
             net.weight.data.copy_(net.weight_org)
             outputs = net.forward(inputs)
             loss = criterion(outputs, targets)  # Compute the loss
+            print(torch.abs(net.weight))
             l1_reg = rho / 2 * (torch.sum(torch.abs(net.weight)) - total_param).norm()
             loss += l1_reg
             loss.backward()
