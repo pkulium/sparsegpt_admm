@@ -388,7 +388,7 @@ class SparseGPT:
         # apply mask from pgd
         out_features, in_features = self.layer.weight.shape
         model = BNNLinear(in_features = in_features, out_features = out_features, bias = False)
-        model.weight_old = self.layer.weight.data()
+        model.weight_old = self.layer.weight.data
         nn.init.kaiming_normal_(model.weight, mode='fan_out')
 
         input = self.inp1.clone().squeeze(0) 
