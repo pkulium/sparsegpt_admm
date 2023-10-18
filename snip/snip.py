@@ -129,11 +129,11 @@ def PGD(net, keep_ratio, train_dataloader, device):
         if epoch == 0 or epoch == total_epoch - 1:
             print(f"Epoch {epoch}, Loss: {loss.item()}")
     
-    num_params_to_keep = int(net.weight_mask.shape[0] * net.weight_mask.shape[1] * keep_ratio)
-    threshold, _ = torch.topk(torch.flatten(net.weight_mask), num_params_to_keep, sorted=True)
-    acceptable_score = threshold[-1]
-    keep_masks = net.weight_mask > acceptable_score
-    return keep_masks
+    # num_params_to_keep = int(net.weight_mask.shape[0] * net.weight_mask.shape[1] * keep_ratio)
+    # threshold, _ = torch.topk(torch.flatten(net.weight_mask), num_params_to_keep, sorted=True)
+    # acceptable_score = threshold[-1]
+    # keep_masks = net.weight_mask > acceptable_score
+    # return keep_masks
 
 import torch.optim as optim
 def VRPEG(model, keep_ratio, train_dataloader, device):
