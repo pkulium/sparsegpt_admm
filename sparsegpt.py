@@ -28,9 +28,9 @@ from torch.nn.functional import linear, conv2d
 def Binarize(tensor,quant_mode='det'):
     if quant_mode=='det':
         # return tensor.sign()
-        print(tensor)
-        tmp = (tensor > 0).float()
-        print(tmp)
+        # print(tensor)
+        tmp = (tensor > 0.5).float()
+        # print(tmp)
         return tmp
     if quant_mode=='bin':
         return (tensor>=0).type(type(tensor))*2-1
@@ -394,8 +394,7 @@ class SparseGPT:
         model = BNNLinear(in_features = in_features, out_features = out_features, bias = False).to(self.layer.weight.device)
         model.weight_old = self.layer.weight.data
         # nn.init.kaiming_normal_(model.weight, mode='fan_out')
-        nn.init.xavier_normal_(model.weight)
-
+        nn.init.uniform_(model.weight, 0, 1)
 
         input = self.inp1.clone().squeeze(0) 
         output = self.out1.clone().squeeze(0) 
