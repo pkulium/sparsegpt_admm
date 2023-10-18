@@ -122,8 +122,8 @@ def PGD(net, keep_ratio, train_dataloader, device):
             outputs = net.forward(inputs)
             loss = criterion(outputs, targets)  # Compute the loss
             print(net.weight)
-            # l1_reg = rho / 2 * (torch.sum(torch.abs(net.weight)) - total_param).norm()
-            # loss += l1_reg
+            l1_reg = rho / 2 * torch.sum(torch.abs(net.weight))
+            loss += l1_reg
             loss.backward()
             mask_optimizer.step()
             clip_mask(net)
