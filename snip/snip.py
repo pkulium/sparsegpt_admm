@@ -107,6 +107,8 @@ def PGD(net, keep_ratio, train_dataloader, device):
             nn.init.constant_(layer.weight_mask, keep_ratio)
             layer.weight.requires_grad = False
             layer.bias.requires_grad = False
+            layer.weight_mask.requires_grad = True
+
             
 
         # Override the forward methods:
@@ -134,7 +136,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
             # net.weight.data.copy_(net.weight_org)
             outputs = net.forward(inputs)
             loss = criterion(outputs, targets)  # Compute the loss
-            loss_reg = sparsity_loss(net.weight)
+            loss_reg = sparsity_loss(net.weight_mask)
             loss += loss_reg
             loss.backward()
             mask_optimizer.step()
