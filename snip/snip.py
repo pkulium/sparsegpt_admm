@@ -121,7 +121,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
     # W_mask = (W_metric<=thresh).int()
     criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
     # mask_optimizer = torch.optim.SGD([net.weight_mask], lr=0.001, momentum=0.9)
-    mask_optimizer = torch.optim.AdamW([net.weight], lr=0.001)
+    mask_optimizer = torch.optim.AdamW([net.weight], lr=0.01)
     rho = 0.01  # You can adjust tsshis value to change the strength of the regularization
     total_epoch = 1000
     total_param = net.weight.shape[0] * net.weight.shape[1]
