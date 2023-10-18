@@ -29,7 +29,7 @@ def Binarize(tensor,quant_mode='det'):
     if quant_mode=='det':
         # return tensor.sign()
         print(tensor)
-        tmp = (tensor > 0).float()
+        tmp = (tensor > 0.5).float()
         print(tmp)
         return tmp
     if quant_mode=='bin':
