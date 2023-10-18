@@ -27,7 +27,8 @@ from torch.nn import Module, Conv2d, Linear
 from torch.nn.functional import linear, conv2d
 def Binarize(tensor,quant_mode='det'):
     if quant_mode=='det':
-        return tensor.sign()
+        # return tensor.sign()
+        return (tensor > 0).float()
     if quant_mode=='bin':
         return (tensor>=0).type(type(tensor))*2-1
     else:
