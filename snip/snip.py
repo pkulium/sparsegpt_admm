@@ -235,8 +235,7 @@ def adjust_learning_rate(optimizer, epoch):
 import torch.optim as optim
 def VRPEG(model, keep_ratio, train_loader, device):
     def solve_v_total(model, total):
-        prune_rate = 0.5
-        k = total * prune_rate
+        k = total * keep_ratio
         a, b = 0, 0
         b = max(b, model.scores.max())
         def f(v):
@@ -257,7 +256,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
                 a = v
         v = max(0, v)
         return v, itr
-    
+    model.weight.requires_grad = False
     parameters = list(model.named_parameters())
     score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
     optimizer = torch.optim.Adam(
@@ -291,8 +290,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
             with torch.no_grad():
                 total = model.scores.nelement()
                 v, itr = solve_v_total(model, total)
-                model.scores.sub_(v).clamp_(0, 1)
-            
+                model.scores.sub_(v).clamp_(0, 1)     
         if epoch % 10 == 0:
             print(f'loss: {loss}')
             print(model.subnet)
