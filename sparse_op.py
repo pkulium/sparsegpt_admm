@@ -223,6 +223,7 @@ class VRPGE_Linear(nn.Linear):
         self.subnet = (torch.rand_like(self.scores) < self.clamped_scores).float()
 
     def forward(self, x):
+        print(self.j)
         if self.prune:
             if not self.train_weights:
                 self.subnet = StraightThroughBinomialSampleNoGrad.apply(self.scores).reshape(self.weight.shape)
