@@ -295,4 +295,5 @@ def VRPEG(model, keep_ratio, train_loader, device):
             
         if epoch % 10 == 0:
             print(f'loss: {loss}')
+            print(model.subnet)
 
