@@ -231,12 +231,12 @@ class VRPGE_Linear(nn.Linear):
                 else:
                     self.stored_mask_1.data = (self.subnet-self.scores)/torch.sqrt((self.scores+1e-20)*(1-self.scores+1e-20))
                 w = self.weight * self.subnet
-                x = F.linear(x, w, self.bias, self.stride, self.padding, self.dilation, self.groups)
+                x = F.linear(x, w, self.bias)
             else:
                 w = self.weight * self.subnet
-                x = F.linear(x, w, self.bias, self.stride, self.padding, self.dilation, self.groups)
+                x = F.linear(x, w, self.bias)
         else:
-            x = F.linear(x, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
+            x = F.linear(x, self.weight, self.bias)
         return x
 
 class StraightThroughBinomialSampleNoGrad(autograd.Function):
