@@ -519,6 +519,7 @@ class SparseGPT:
             print(f'subnet:{model.subnet}')
             print(f'ratio:{torch.sum(model.subnet)/ model.subnet.nelement()}')
             self.layer.weight[~model.subnet.to(torch.int)] = 0
+            
         del model
         del dataset
         del train_loader
