@@ -299,7 +299,8 @@ def VRPEG(model, keep_ratio, train_loader, device):
             for j in range(K):
                 model.j = j
                 output = model(image)
-                original_loss = criterion(output, target)
+                # original_loss = criterion(output, target)
+                original_loss = torch.sum((target - output) ** 2)
                 # print(f'original_loss:{original_loss}')
                 # print(f'subnet:{model.subnet}')
                 loss = original_loss/K
