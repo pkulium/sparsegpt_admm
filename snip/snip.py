@@ -123,7 +123,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
     # mask_optimizer = torch.optim.SGD([net.weight_mask], lr=0.001, momentum=0.9)
     mask_optimizer = torch.optim.AdamW([net.weight], lr=0.01)
     rho = 0.001  # You can adjust tsshis value to change the strength of the regularization
-    total_epoch = 1000
+    total_epoch = 100
     total_param = net.weight.shape[0] * net.weight.shape[1]
     for epoch in range(total_epoch):
         for i, (inputs, targets) in enumerate(train_dataloader):
