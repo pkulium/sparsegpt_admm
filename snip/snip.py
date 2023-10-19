@@ -181,6 +181,8 @@ def VRPEG(model, keep_ratio, train_dataloader, device):
     
     import torch.optim as optim
     model.train_weights = False
+    model.weight.requires_grad = False
+    model.bias.requires_grad = False
 
     # Define the optimizer, loss function, and regularization strength
     parameters = list(model.named_parameters())
