@@ -278,7 +278,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
     model.weight.requires_grad = False
     parameters = list(model.named_parameters())
     score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
-    lr = 0.001
+    lr = 12e-3
     optimizer = torch.optim.Adam(
         score_params, lr=lr, weight_decay=0
     )
