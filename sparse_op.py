@@ -195,83 +195,56 @@ class ProbMaskLinear(nn.Linear):
             x = F.linear(x, w, self.bias)
         return x
 
+import numpy as np
+import torch
+import torch.autograd as autograd
+import torch.nn as nn
+import torch.nn.functional as F
+import math
 
-# class SoftMaskedLinear(nn.Linear):
-#     def __init__(self, in_features, out_features, mask_initial_value=0.5):
-#         super(SoftMaskedLinear, self).__init__(in_features, out_features)
-#         self.mask_initial_value = torch.tensor(mask_initial_value).to('cuda:0')
-        
-#         self.in_features = in_features
-#         self.out_features = out_features    
-        
-#         nn.init.xavier_normal_(self.weight)
-#         self.init_weight = nn.Parameter(torch.zeros_like(self.weight), requires_grad=False)
-#         self.init_mask()
-        
-#     def init_mask(self):
-#         self.mask_weight = nn.Parameter(torch.Tensor(self.out_features, self.in_features))
-#         nn.init.constant_(self.mask_weight, self.mask_initial_value)
 
-#     def compute_mask(self, temp, ticket):
-#         scaling = 1. / (1. + torch.exp(-self.mask_initial_value))
-#         if ticket: 
-#             mask = (self.mask_weight > 0).float()
-#         else: 
-#             mask = torch.sigmoid(temp * self.mask_weight)
-#         return scaling * mask      
-        
-#     def prune(self, temp):
-#         self.mask_weight.data = torch.clamp(temp * self.mask_weight.data, max=self.mask_initial_value)   
+class VRPGE_Linear(nn.Linear):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.scores = nn.Parameter(torch.Tensor(self.weight.size()[0], 1, 1, 1))
+        self.register_buffer('subnet', torch.zeros_like(self.scores))
+        self.train_weights = False
+        nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
+        self.prune = True
+        self.register_buffer("stored_mask_0", torch.zeros_like(self.scores))
+        self.register_buffer("stored_mask_1", torch.zeros_like(self.scores))
 
-#     def forward(self, x, temp=1, ticket=False):
-#         self.mask = self.compute_mask(temp, ticket)
-#         masked_weight = self.weight * self.mask
-#         out = F.linear(x, masked_weight)        
-#         return out
-        
-#     def checkpoint(self):
-#         self.init_weight.data = self.weight.clone()       
-        
-#     def rewind_weights(self):
-#         self.weight.data = self.init_weight.clone()
+    @property
+    def clamped_scores(self):
+        return self.scores
 
-#     def extra_repr(self):
-#         return '{}, {}'.format(self.in_features, self.out_features)
+    def fix_subnet(self):
+        self.subnet = (torch.rand_like(self.scores) < self.clamped_scores).float()
 
-class SoftMaskedLinear(nn.Module):
-    def __init__(self, in_features, out_features, mask_initial_value=0.5):
-        super(SoftMaskedLinear, self).__init__()
-        self.mask_initial_value = mask_initial_value
-        
-        self.in_features = in_features
-        self.out_features = out_features    
-        
-        self.weight = nn.Parameter(torch.Tensor(out_features, in_features))
-        nn.init.xavier_normal_(self.weight)
-        self.init_weight = nn.Parameter(torch.zeros_like(self.weight), requires_grad=False)
-        self.init_mask()
-        
-    def init_mask(self):
-        self.mask_weight = nn.Parameter(torch.Tensor(self.out_features, self.in_features))
-        nn.init.constant_(self.mask_weight, self.mask_initial_value)
+    def forward(self, x):
+        if self.prune:
+            if not self.train_weights:
+                self.subnet = StraightThroughBinomialSampleNoGrad.apply(self.scores)
+                j = 0
+                if j == 0:
+                    self.stored_mask_0.data = (self.subnet-self.scores)/torch.sqrt((self.scores+1e-20)*(1-self.scores+1e-20))
+                else:
+                    self.stored_mask_1.data = (self.subnet-self.scores)/torch.sqrt((self.scores+1e-20)*(1-self.scores+1e-20))
+                w = self.weight * self.subnet
+                x = F.linear(x, w, self.bias, self.stride, self.padding, self.dilation, self.groups)
+            else:
+                w = self.weight * self.subnet
+                x = F.linear(x, w, self.bias, self.stride, self.padding, self.dilation, self.groups)
+        else:
+            x = F.linear(x, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
+        return x
 
-    def compute_mask(self, temp, ticket):
-        scaling = 1. / F.sigmoid(self.mask_initial_value)
-        if ticket: mask = (self.mask_weight > 0).float()
-        else: mask = F.sigmoid(temp * self.mask_weight)
-        return scaling * mask      
-        
-    def prune(self, temp):
-        self.mask_weight.data = torch.clamp(temp * self.mask_weight.data, max=self.mask_initial_value)   
+class StraightThroughBinomialSampleNoGrad(autograd.Function):
+    @staticmethod
+    def forward(ctx, scores):
+        output = (torch.rand_like(scores) < scores).float()
+        return output
 
-    def forward(self, x, temp=1, ticket=False):
-        self.mask = self.compute_mask(temp, ticket)
-        masked_weight = self.weight * self.mask
-        out = F.linear(x, masked_weight)        
-        return out
-    
-    def checkpoint(self):
-        self.init_weight.data = self.weight.clone()       
-        
-    def rewind_weights(self):
-        self.weight.data = self.init_weight.clone()
+    @staticmethod
+    def backward(ctx, grad_outputs):
+        return torch.zeros_like(grad_outputs)

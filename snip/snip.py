@@ -158,7 +158,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
 
 
 import torch.optim as optim
-def VRPEG(model, keep_ratio, train_dataloader, device):
+def pro_mask(model, keep_ratio, train_dataloader, device):
    # Define the optimizer, you can use any optimizer of your choice
     prune_rate = 0.5
     def solve_v_total(model, total):
@@ -232,74 +232,61 @@ def adjust_learning_rate(optimizer, epoch):
         else: break
     for param_group in optimizer.param_groups: param_group['lr'] = lr
 
-# import torch.optim as optim
-# def VRPEG(model, keep_ratio, train_dataloader, device):
-#     epochs = 85
-#     final_temp = 200
-#     iters_per_reset = epochs-1
-#     lr = 0.1
-#     decay = 0.0001
-#     rounds = 3
-#     rewind_epoch = 2
-#     lmbda = 1e-8
-
-#     temp_increase = final_temp**(1./iters_per_reset)
-
-#     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
-#     num_params = sum([p.numel() for p in trainable_params])
-#     print("Total number of parameters: {}".format(num_params))
-
-#     # weight_params = map(lambda a: a[1], filter(lambda p: p[1].requires_grad and 'mask' not in p[0], model.named_parameters()))
-#     # mask_params = map(lambda a: a[1], filter(lambda p: p[1].requires_grad and 'mask' in p[0], model.named_parameters()))
-#     weight_params = [model.weight, model.bias]
-#     mask_params = [model.mask_weight]
-
-#     model.ticket = False
-#     weight_optim = optim.SGD(weight_params, lr=lr, momentum=0.9, nesterov=True, weight_decay=decay)
-#     mask_optim = optim.SGD(mask_params, lr=lr, momentum=0.9, nesterov=True)
-#     optimizers = [weight_optim, mask_optim]
-#     criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
-#     for outer_round in range(rounds):
-#         model.temp = 1
-#         print('--------- Round {} -----------'.format(outer_round))
-#         for epoch in range(epochs):
-#             # print('\t--------- Epoch {} -----------'.format(epoch))
-#             model.train()
-#             if epoch > 0: model.temp *= temp_increase  
-#             if outer_round == 0 and epoch == rewind_epoch: model.checkpoint()
-#             for optimizer in optimizers: adjust_learning_rate(optimizer, epoch)
-
-#             for batch_idx, (data, target) in enumerate(train_dataloader):
-#                 data, target = data.to(device), target.to(device)
-#                 for optimizer in optimizers: optimizer.zero_grad()
-#                 output = model(data)
-#                 masks = [model.mask_weight]
-#                 entries_sum = sum(m.sum() for m in masks)
-#                 loss = criterion(output, target) + lmbda * entries_sum
-#                 loss.backward()
-#                 for optimizer in optimizers: optimizer.step()
-#         if outer_round != rounds-1: model.prune(model.temp)
-
-#     print('--------- Training final ticket -----------')
-#     optimizers = [optim.SGD(weight_params, lr=lr, momentum=0.9, nesterov=True, weight_decay=decay)]
-#     model.ticket = True
-#     model.rewind_weights()
-
-
-#     for epoch in range(epochs):
-#         # print('\t--------- Epoch {} -----------'.format(epoch))
-#         model.train()
-#         if epoch > 0: model.temp *= temp_increase  
-#         if outer_round == 0 and epoch == rewind_epoch: model.checkpoint()
-#         for optimizer in optimizers: adjust_learning_rate(optimizer, epoch)
-
-#         for batch_idx, (data, target) in enumerate(train_dataloader):
-#             data, target = data.to(device), target.to(device)
-#             for optimizer in optimizers: optimizer.zero_grad()
-#             output = model(data)
-#             masks = [model.mask_weight]
-#             entries_sum = sum(m.sum() for m in masks)
-#             loss = criterion(output, target) + lmbda * entries_sum
-#             loss.backward()
-#             for optimizer in optimizers: optimizer.step()
-#     return model.mask
+import torch.optim as optim
+def VRPEG(model, keep_ratio, train_loader, device):
+    def solve_v_total(model, total):
+        prune_rate = 0.5
+        k = total * prune_rate
+        a, b = 0, 0
+        b = max(b, model.scores.max())
+        def f(v):
+            s = (model.scores - v).clamp(0, 1).sum()
+            return s - k
+        if f(0) < 0:
+            return 0, 0
+        itr = 0
+        while (1):
+            itr += 1
+            v = (a + b) / 2
+            obj = f(v)
+            if abs(obj) < 1e-3 or itr > 20:
+                break
+            if obj < 0:
+                b = v
+            else:
+                a = v
+        v = max(0, v)
+        return v, itr
+    
+    parameters = list(model.named_parameters())
+    score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
+    optimizer = torch.optim.Adam(
+        score_params, lr=0.1, weight_decay=1e-4
+    )
+    epochs = 100
+    criterion = nn.MSELoss()
+    K = 20
+    for epoch in range(epochs):  # Number of epochs
+        for i, (image, target) in tqdm.tqdm(
+            enumerate(train_loader), ascii=True, total=len(train_loader)
+        ):
+            image = image.cuda('cuda:0', non_blocking=True)
+            target = target.cuda('cuda:0', non_blocking=True)
+            l, ol, gl, al, a1, a5, ll = 0, 0, 0, 0, 0, 0, 0
+            optimizer.zero_grad()
+            fn_list = []
+            for j in range(K):
+                output = model(image)
+                original_loss = criterion(output, target)
+                loss = original_loss/K
+                l = l + loss.item()
+                fn_list.append(loss.item()*K)
+                loss.backward(retain_graph=True)
+            fn_avg = l
+            model.scores.grad.data += 1/(K-1)*(fn_list[0] - fn_avg)*getattr(model, 'stored_mask_0') + 1/(K-1)*(fn_list[1] - fn_avg)*getattr(model, 'stored_mask_1')
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 3)
+            optimizer.step()
+            with torch.no_grad():
+                total += model.scores.nelement()
+                v, itr = solve_v_total(model, total)
+                model.scores.sub_(v).clamp_(0, 1)
