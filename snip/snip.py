@@ -134,8 +134,9 @@ def PGD(net, keep_ratio, train_dataloader, device):
             net.weight.data.copy_(net.weight_org)
             outputs = net.forward(inputs)
             loss = criterion(outputs, targets)  # Compute the loss
-            loss_reg = sparsity_loss(net.weight)
-            # loss += loss_reg
+            # loss_reg = sparsity_loss(net.weight)
+            loss_reg = net.weight.abs().sum()
+            loss += loss_reg
             loss.backward()
             mask_optimizer.step()
             clip_mask(net)
