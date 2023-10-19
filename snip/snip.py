@@ -123,7 +123,7 @@ def PGD(net, keep_ratio, train_dataloader, device):
     # mask_optimizer = torch.optim.SGD([net.weight_mask], lr=0.001, momentum=0.9)
     mask_optimizer = torch.optim.AdamW([net.weight], lr=0.01)
     rho = 0.001  # You can adjust tsshis value to change the strength of the regularization
-    total_epoch = 100
+    total_epoch = 1000
     total_param = net.weight.shape[0] * net.weight.shape[1]
     for epoch in range(total_epoch):
         for i, (inputs, targets) in enumerate(train_dataloader):
@@ -143,7 +143,8 @@ def PGD(net, keep_ratio, train_dataloader, device):
             net.weight_org.data.copy_(net.weight.data.clamp_(0,1))
         if epoch % 10 == 0:
             print(f"Epoch {epoch}, Loss: {loss.item()}")
-            print(net.weight)
+            if epoch % 100 == 0:
+                print(net.weight)
     
     # num_params_to_keep = int(net.weight_mask.shape[0] * net.weight_mask.shape[1] * keep_ratio)
     # threshold, _ = torch.topk(torch.flatten(net.weight_mask), num_params_to_keep, sorted=True)
