@@ -272,10 +272,11 @@ def VRPEG(model, keep_ratio, train_loader, device):
         ):
             image = image.cuda('cuda:0', non_blocking=True)
             target = target.cuda('cuda:0', non_blocking=True)
-            l, ol, gl, al, a1, a5, ll = 0, 0, 0, 0, 0, 0, 0
+            l = 0
             optimizer.zero_grad()
             fn_list = []
             for j in range(K):
+                model.j = j
                 output = model(image)
                 original_loss = criterion(output, target)
                 loss = original_loss/K
