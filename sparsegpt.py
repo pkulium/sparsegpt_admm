@@ -516,7 +516,8 @@ class SparseGPT:
         with torch.enable_grad():
             model.train()
             VRPEG(model, 0.5, train_loader, self.dev)
-        
+            print(f'subnet:{model.subnet}')
+
         del model
         del dataset
         del train_loader
