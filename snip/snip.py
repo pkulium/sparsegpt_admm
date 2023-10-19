@@ -263,7 +263,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
         score_params, lr=0.1, weight_decay=1e-4
     )
     epochs = 50
-    criterion = nn.MSELoss()
+    criterion = nn.L2Loss()
     K = 20
     for epoch in range(epochs):  # Number of epochs
         # for i, (image, target) in tqdm.tqdm(

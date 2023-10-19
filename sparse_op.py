@@ -230,7 +230,7 @@ class VRPGE_Linear(nn.Linear):
         # print(f'self.j: {self.j}')
         if self.prune:
             if not self.train_weights:
-                self.subnet = StraightThroughBinomialSampleNoGrad.apply(self.scores).reshape(self.weight.shape)
+                self.subnet = StraightThroughBinomialSampleNoGrad.apply(self.scores) 
                 if self.j == 0:
                     self.stored_mask_0.data = (self.subnet-self.scores)/torch.sqrt((self.scores+1e-20)*(1-self.scores+1e-20))
                 else:
