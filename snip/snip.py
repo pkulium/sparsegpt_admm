@@ -280,6 +280,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
                 output = model(image)
                 original_loss = criterion(output, target)
                 print(f'original_loss:{original_loss}')
+                print(f'subnet:{model.subnet}')
                 loss = original_loss/K
                 fn_list.append(loss.item()*K)
                 loss.backward(retain_graph=True)
