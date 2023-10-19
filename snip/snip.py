@@ -267,9 +267,10 @@ def VRPEG(model, keep_ratio, train_loader, device):
     criterion = nn.MSELoss()
     K = 20
     for epoch in range(epochs):  # Number of epochs
-        for i, (image, target) in tqdm.tqdm(
-            enumerate(train_loader), ascii=True, total=len(train_loader)
-        ):
+        # for i, (image, target) in tqdm.tqdm(
+            # enumerate(train_loader), ascii=True, total=len(train_loader)
+        # ):
+        for i, (image, target) in enumerate(train_loader):
             image = image.cuda('cuda:0', non_blocking=True)
             target = target.cuda('cuda:0', non_blocking=True)
             l = 0
