@@ -287,6 +287,6 @@ def VRPEG(model, keep_ratio, train_loader, device):
             torch.nn.utils.clip_grad_norm_(model.parameters(), 3)
             optimizer.step()
             with torch.no_grad():
-                total += model.scores.nelement()
+                total = model.scores.nelement()
                 v, itr = solve_v_total(model, total)
                 model.scores.sub_(v).clamp_(0, 1)
