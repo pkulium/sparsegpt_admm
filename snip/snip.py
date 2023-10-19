@@ -275,6 +275,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
             assign_learning_rate(optimizer, lr)
             return lr
         return _lr_adjuster
+    
     model.weight.requires_grad = False
     parameters = list(model.named_parameters())
     score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
