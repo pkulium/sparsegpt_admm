@@ -256,19 +256,38 @@ def VRPEG(model, keep_ratio, train_loader, device):
                 a = v
         v = max(0, v)
         return v, itr
+    import numpy as np
+    def _warmup_lr(base_lr, warmup_length, epoch):
+        return base_lr * (epoch + 1) / warmup_length
+    
+    def assign_learning_rate(optimizer, new_lr):
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = new_lr
+
+    def cosine_lr(optimizer, warmup_length, epochs, lr):
+        def _lr_adjuster(epoch, iteration):
+            if epoch < warmup_length:
+                lr = _warmup_lr(lr, warmup_length, epoch)
+            else:
+                e = epoch - warmup_length
+                es = epochs - warmup_length
+                lr = 0.5 * (1 + np.cos(np.pi * e / es)) * lr
+            assign_learning_rate(optimizer, lr)
+            return lr
+        return _lr_adjuster
     model.weight.requires_grad = False
     parameters = list(model.named_parameters())
     score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
+    lr = 0.1
     optimizer = torch.optim.Adam(
-        score_params, lr=0.001, weight_decay=1e-4
+        score_params, lr=lr, weight_decay=0
     )
     epochs = 50
     criterion = nn.L1Loss()
     K = 20
+    lr_policy = cosine_lr(optimizer, 0, epochs, lr)
     for epoch in range(epochs):  # Number of epochs
-        # for i, (image, target) in tqdm.tqdm(
-            # enumerate(train_loader), ascii=True, total=len(train_loader)
-        # ):
+        cosine_lr(epoch, iteration=None)
         for i, (image, target) in enumerate(train_loader):
             image = image.cuda('cuda:0', non_blocking=True)
             target = target.cuda('cuda:0', non_blocking=True)
