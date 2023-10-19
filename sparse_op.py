@@ -206,7 +206,7 @@ import math
 class VRPGE_Linear(nn.Linear):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.scores = nn.Parameter(torch.Tensor(self.weight.size()[0], 1, 1, 1))
+        self.scores = nn.Parameter(torch.Tensor(self.weight.shape))
         self.register_buffer('subnet', torch.zeros_like(self.scores))
         self.train_weights = False
         nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
@@ -224,7 +224,7 @@ class VRPGE_Linear(nn.Linear):
     def forward(self, x):
         if self.prune:
             if not self.train_weights:
-                self.subnet = StraightThroughBinomialSampleNoGrad.apply(self.scores)
+                self.subnet = StraightThroughBinomialSampleNoGrad.apply(self.scores).reshape(self.weight.shape)
                 j = 0
                 if j == 0:
                     self.stored_mask_0.data = (self.subnet-self.scores)/torch.sqrt((self.scores+1e-20)*(1-self.scores+1e-20))
