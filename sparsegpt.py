@@ -512,7 +512,7 @@ class SparseGPT:
 
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
-        train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+        train_loader = DataLoader(dataset, batch_size=256, shuffle=True)
         with torch.enable_grad():
             model.train()
             VRPEG(model, 0.5, train_loader, self.dev)
