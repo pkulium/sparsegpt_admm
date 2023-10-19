@@ -313,8 +313,5 @@ def VRPEG(model, keep_ratio, train_loader, device):
                 total = model.scores.nelement()
                 v, itr = solve_v_total(model, total)
                 model.scores.sub_(v).clamp_(0, 1)     
-        if epoch % 10 == 0:
-            print(f'loss: {loss}')
-            # model.fix_subnet()
-            # print(model.subnet)
+        print(f'loss: {loss}')
 
