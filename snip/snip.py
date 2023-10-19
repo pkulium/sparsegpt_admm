@@ -264,8 +264,8 @@ def VRPEG(model, keep_ratio, train_loader, device):
         for param_group in optimizer.param_groups:
             param_group["lr"] = new_lr
 
-    def cosine_lr(optimizer, warmup_length, epochs, **kwargs):
-        def _lr_adjuster(epoch, iteration):
+    def cosine_lr(optimizer, warmup_length, epochs, lr):
+        def _lr_adjuster(epoch, iteration, lr):
             if epoch < warmup_length:
                 lr = _warmup_lr(lr, warmup_length, epoch)
             else:
@@ -285,9 +285,9 @@ def VRPEG(model, keep_ratio, train_loader, device):
     epochs = 10
     criterion = nn.L1Loss()
     K = 20
-    lr_policy = cosine_lr(optimizer, 0, epochs=epochs,lr=lr)
+    lr_policy = cosine_lr(optimizer, 0, epochs, lr)
     for epoch in range(epochs):  # Number of epochs
-        lr_policy(epoch, iteration=None)
+        lr_policy(epoch, iteration=None, lr)
         for i, (image, target) in enumerate(train_loader):
             image = image.cuda('cuda:0', non_blocking=True)
             target = target.cuda('cuda:0', non_blocking=True)
