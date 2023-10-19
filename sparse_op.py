@@ -237,7 +237,7 @@ class VRPGE_Linear(nn.Linear):
                     self.stored_mask_1.data = (self.subnet-self.scores)/torch.sqrt((self.scores+1e-20)*(1-self.scores+1e-20))
                 w = self.weight * self.subnet
                 print(f'w:{w}')
-                print(f'bias:{self.bias}')
+                print(f'weight:{self.weight}')
                 x = F.linear(x, w, self.bias)
             else:
                 w = self.weight * self.subnet
