@@ -203,16 +203,12 @@ def pro_mask(model, keep_ratio, train_dataloader, device):
     for epoch in range(10):  # Number of epochs
         for input_tensor, label in train_dataloader:  # label is output_a
             optimizer.zero_grad()
-            
             # Forward pass
             output_model = model(input_tensor)
-            
             # Compute the loss
             loss_mse = mse_loss(output_model, label)  # Compare output_model with label (output_a)
             loss_mse.backward()
-
             optimizer.step()
-
             with torch.no_grad():
                 total = model.scores.nelement()
                 v = solve_v_total(model, total)
@@ -286,7 +282,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
     optimizer = torch.optim.Adam(
         score_params, lr=lr, weight_decay=0
     )
-    epochs = 10
+    epochs = 2
     criterion = nn.MSELoss()
     K = 20
     lr_policy = cosine_lr(optimizer, 0, epochs, lr)
