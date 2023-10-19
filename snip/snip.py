@@ -265,6 +265,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
             param_group["lr"] = new_lr
 
     def cosine_lr(optimizer, warmup_length, epochs, lr):
+        lr = lr
         def _lr_adjuster(epoch, iteration):
             if epoch < warmup_length:
                 lr = _warmup_lr(lr, warmup_length, epoch)
