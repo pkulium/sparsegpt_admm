@@ -518,8 +518,8 @@ class SparseGPT:
             VRPEG(model, 0.5, train_loader, self.dev)
             print(f'subnet:{model.subnet}')
             print(f'ratio:{torch.sum(model.subnet)/ model.subnet.nelement()}')
-            self.layer.weight[~model.subnet.to(torch.int)] = 0
-            
+            self.layer.weight[~model.subnet.data.to(torch.int)] = 0
+
         del model
         del dataset
         del train_loader
