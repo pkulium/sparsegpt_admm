@@ -262,7 +262,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
     optimizer = torch.optim.Adam(
         score_params, lr=0.1, weight_decay=1e-4
     )
-    epochs = 100
+    epochs = 50
     criterion = nn.MSELoss()
     K = 20
     for epoch in range(epochs):  # Number of epochs
@@ -280,9 +280,9 @@ def VRPEG(model, keep_ratio, train_loader, device):
                 output = model(image)
                 original_loss = criterion(output, target)
                 loss = original_loss/K
-                l = l + loss.item()
                 fn_list.append(loss.item()*K)
                 loss.backward(retain_graph=True)
+                l = l + loss.item()
             fn_avg = l
             model.scores.grad.data += 1/(K-1)*(fn_list[0] - fn_avg)*getattr(model, 'stored_mask_0') + 1/(K-1)*(fn_list[1] - fn_avg)*getattr(model, 'stored_mask_1')
             torch.nn.utils.clip_grad_norm_(model.parameters(), 3)
