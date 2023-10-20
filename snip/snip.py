@@ -290,7 +290,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
     lr_policy = cosine_lr(optimizer, 0, epochs, lr)
     for epoch in range(epochs):  # Number of epochs
         # lr_policy(epoch, iteration=None, lr=lr)
-        assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * lr)
+        # assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * lr)
         for i, (image, target) in enumerate(train_loader):
             image = image.cuda('cuda:0', non_blocking=True)
             target = target.cuda('cuda:0', non_blocking=True)
