@@ -294,7 +294,8 @@ def VRPEG(model, keep_ratio, train_loader, device):
         nesterov=False,
     )
 
-    lr = 12e-3
+    # lr = 12e-3
+    lr = 0.1
     optimizer = torch.optim.Adam(
         score_params, lr=lr, weight_decay=0
     )
@@ -335,7 +336,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
                 total = model.scores.nelement()
                 v, itr = solve_v_total(model, total)
                 model.scores.sub_(v).clamp_(0, 1)     
-                
-        if epoch == 0 or epoch == epochs - 1:
+
+        if epoch % 10 == 0:
             print(f'loss: {loss}')
 
