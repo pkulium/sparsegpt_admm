@@ -516,7 +516,7 @@ class SparseGPT:
         train_loader = DataLoader(dataset, batch_size=256, shuffle=True)
         with torch.enable_grad():
             model.train()
-            print(f'orign subnet:{model.subnet}')
+            print(f'orign subnet:{model.scores}')
             VRPEG(model, 0.5, train_loader, self.dev)
             print(f'final subnet:{model.subnet}')
             print(f'ratio:{torch.sum(model.subnet)/ model.subnet.nelement()}')
