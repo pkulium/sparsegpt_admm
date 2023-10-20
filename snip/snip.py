@@ -299,7 +299,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
     optimizer = torch.optim.Adam(
         score_params, lr=lr, weight_decay=0
     )
-    epochs = 500
+    epochs = 5000
     criterion = nn.MSELoss()
     K = 20
     lr_policy = cosine_lr(optimizer, 0, epochs, lr)
