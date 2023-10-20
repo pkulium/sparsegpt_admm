@@ -499,6 +499,7 @@ class SparseGPT:
         mask = None
 
         # apply mask from pgd
+        dtype = self.layer.weight.data.dtype
         out_features, in_features = self.layer.weight.shape
         model = VRPGE_Linear(in_features=in_features, out_features=out_features, bias=True).to(self.dev)
         model.weight.data = self.layer.weight.data.clone()
@@ -518,7 +519,7 @@ class SparseGPT:
             VRPEG(model, 0.5, train_loader, self.dev)
             print(f'subnet:{model.subnet}')
             print(f'ratio:{torch.sum(model.subnet)/ model.subnet.nelement()}')
-        self.layer.weight.data = model.weight.data.clone()
+        self.layer.weight.data = model.weight.data.clone().to(dtype)
         self.layer.weight[~model.subnet.data.bool()] = 0
 
 
