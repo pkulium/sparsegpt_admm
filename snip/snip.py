@@ -299,14 +299,13 @@ def VRPEG(model, keep_ratio, train_loader, device):
     optimizer = torch.optim.Adam(
         score_params, lr=lr, weight_decay=0
     )
-    epochs = 50
+    epochs = 500
     criterion = nn.MSELoss()
     K = 20
     lr_policy = cosine_lr(optimizer, 0, epochs, lr)
     for epoch in range(epochs):  # Number of epochs
-        # lr_policy(epoch, iteration=None, lr=lr)
-        assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * lr)
-        assign_learning_rate(weight_opt, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * weight_lr)
+        # assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * lr)
+        # assign_learning_rate(weight_opt, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * weight_lr)
         for i, (image, target) in enumerate(train_loader):
             image = image.cuda('cuda:0', non_blocking=True)
             target = target.cuda('cuda:0', non_blocking=True)
@@ -337,6 +336,6 @@ def VRPEG(model, keep_ratio, train_loader, device):
                 v, itr = solve_v_total(model, total)
                 model.scores.sub_(v).clamp_(0, 1)     
 
-        if epoch % 10 == 0:
+        if epoch % 50 == 0:
             print(f'loss: {loss}')
 
