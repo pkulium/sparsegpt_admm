@@ -516,8 +516,9 @@ class SparseGPT:
         train_loader = DataLoader(dataset, batch_size=256, shuffle=True)
         with torch.enable_grad():
             model.train()
-            VRPEG(model, 0.5, train_loader, self.dev)
             print(f'subnet:{model.subnet}')
+            VRPEG(model, 0.5, train_loader, self.dev)
+            model.fix_subnet()
             print(f'ratio:{torch.sum(model.subnet)/ model.subnet.nelement()}')
         self.layer.weight.data = model.weight.data.clone().to(dtype)
         self.layer.weight[~model.subnet.data.bool()] = 0
