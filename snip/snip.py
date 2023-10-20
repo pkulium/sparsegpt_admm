@@ -234,6 +234,7 @@ def assign_learning_rate(optimizer, new_lr):
 
 import torch.optim as optim
 def VRPEG(model, keep_ratio, train_loader, device):
+
     def solve_v_total(model, total):
         k = total * keep_ratio
         a, b = 0, 0
@@ -257,6 +258,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
         v = max(0, v)
         return v, itr
     import numpy as np
+
     def _warmup_lr(base_lr, warmup_length, epoch):
         return base_lr * (epoch + 1) / warmup_length
     
@@ -276,12 +278,22 @@ def VRPEG(model, keep_ratio, train_loader, device):
             return lr
         return _lr_adjuster
     
-    model.weight.requires_grad = False
     parameters = list(model.named_parameters())
     score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
-    # lr = 12e-3
-    lr = 0.1
-    optimizer = torch.optim.AdamW(
+    weight_opt = None
+
+    model.weight.requires_grad = True
+    weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
+    weight_opt = torch.optim.SGD(
+        weight_params,
+        0.1,
+        momentum=0.9,
+        weight_decay=5e-4,
+        nesterov=False,
+    )
+
+    lr = 12e-3
+    optimizer = torch.optim.Adam(
         score_params, lr=lr, weight_decay=0
     )
     epochs = 100
@@ -290,12 +302,15 @@ def VRPEG(model, keep_ratio, train_loader, device):
     lr_policy = cosine_lr(optimizer, 0, epochs, lr)
     for epoch in range(epochs):  # Number of epochs
         # lr_policy(epoch, iteration=None, lr=lr)
-        # assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * lr)
+        assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * lr)
+        assign_learning_rate(weight_opt, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * lr)
         for i, (image, target) in enumerate(train_loader):
             image = image.cuda('cuda:0', non_blocking=True)
             target = target.cuda('cuda:0', non_blocking=True)
             l = 0
             optimizer.zero_grad()
+            if weight_opt is not None:
+                weight_opt.zero_grad()
             fn_list = []
             for j in range(K):
                 model.j = j
@@ -312,6 +327,8 @@ def VRPEG(model, keep_ratio, train_loader, device):
             model.scores.grad.data += 1/(K-1)*(fn_list[0] - fn_avg)*getattr(model, 'stored_mask_0') + 1/(K-1)*(fn_list[1] - fn_avg)*getattr(model, 'stored_mask_1')
             torch.nn.utils.clip_grad_norm_(model.parameters(), 3)
             optimizer.step()
+            if weight_opt is not None:
+                weight_opt.step()
             with torch.no_grad():
                 total = model.scores.nelement()
                 v, itr = solve_v_total(model, total)
