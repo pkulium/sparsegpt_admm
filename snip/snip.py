@@ -284,10 +284,11 @@ def VRPEG(model, keep_ratio, train_loader, device):
 
     model.weight.requires_grad = True
     model.bias.requires_grad = True
+    weight_lr = 0.1
     weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
     weight_opt = torch.optim.SGD(
         weight_params,
-        0.1,
+        weight_lr,
         momentum=0.9,
         weight_decay=5e-4,
         nesterov=False,
@@ -297,14 +298,14 @@ def VRPEG(model, keep_ratio, train_loader, device):
     optimizer = torch.optim.Adam(
         score_params, lr=lr, weight_decay=0
     )
-    epochs = 1000
+    epochs = 500
     criterion = nn.MSELoss()
     K = 20
     lr_policy = cosine_lr(optimizer, 0, epochs, lr)
     for epoch in range(epochs):  # Number of epochs
         # lr_policy(epoch, iteration=None, lr=lr)
         assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * lr)
-        assign_learning_rate(weight_opt, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * lr)
+        assign_learning_rate(weight_opt, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * weight_lr)
         for i, (image, target) in enumerate(train_loader):
             image = image.cuda('cuda:0', non_blocking=True)
             target = target.cuda('cuda:0', non_blocking=True)
