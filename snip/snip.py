@@ -291,12 +291,12 @@ def VRPEG(model, keep_ratio, train_loader, device):
         weight_decay=5e-4,
         nesterov=False,
     )
-    
+
     lr = 12e-3
     optimizer = torch.optim.Adam(
         score_params, lr=lr, weight_decay=0
     )
-    epochs = 100
+    epochs = 500
     criterion = nn.MSELoss()
     K = 20
     lr_policy = cosine_lr(optimizer, 0, epochs, lr)
