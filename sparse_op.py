@@ -209,9 +209,7 @@ class VRPGE_Linear(nn.Linear):
         self.scores = nn.Parameter(torch.rand_like(self.weight))
         self.register_buffer('subnet', torch.zeros_like(self.scores))
         self.train_weights = False
-        print("Before initialization:", self.scores)
         nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
-        print("After initialization:", self.scores)
         # score_init_constant = 0.5
         # self.scores.data = (
         #         torch.ones_like(self.scores) * score_init_constant
