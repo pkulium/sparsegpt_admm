@@ -284,7 +284,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
 
     model.weight.requires_grad = True
     model.bias.requires_grad = True
-    weight_lr = 0.1
+    weight_lr = 0.01
     weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
     weight_opt = torch.optim.SGD(
         weight_params,
