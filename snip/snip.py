@@ -280,7 +280,7 @@ def VRPEG(model, keep_ratio, train_loader, device):
     parameters = list(model.named_parameters())
     score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
     # lr = 12e-3
-    lr = 0.01
+    lr = 0.1
     optimizer = torch.optim.AdamW(
         score_params, lr=lr, weight_decay=0
     )
