@@ -294,8 +294,8 @@ def VRPEG(model, keep_ratio, train_loader, device):
         nesterov=False,
     )
 
-    # lr = 12e-3
-    lr = 0.1
+    lr = 12e-3
+    # lr = 0.1
     optimizer = torch.optim.Adam(
         score_params, lr=lr, weight_decay=0
     )
