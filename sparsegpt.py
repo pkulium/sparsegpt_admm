@@ -513,7 +513,7 @@ class SparseGPT:
 
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
-        train_loader = DataLoader(dataset, batch_size=256, shuffle=True)
+        train_lofader = DataLoader(dataset, batch_size=32, shuffle=True)
         with torch.enable_grad():
             model.train()
             print(f'orign subnet:{model.scores}')
