@@ -22,40 +22,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import math
+from net_utils import admm_solve
 
-from torch.nn import Module, Conv2d, Linear
-from torch.nn.functional import linear, conv2d
-def Binarize(tensor,quant_mode='det'):
-    if quant_mode=='det':
-        # return tensor.sign()
-        # print(tensor)
-        tmp = (tensor > 0.5).float()
-        # print(tmp)
-        return tmp
-    if quant_mode=='bin':
-        return (tensor>=0).type(type(tensor))*2-1
-    else:
-        return tensor.add_(1).div_(2).add_(torch.rand(tensor.size()).add(-0.5)).clamp_(-1,1).round().mul_(2).add_(-1)
-
-class BNNLinear(nn.Linear):
-
-    def __init__(self, *kargs, **kwargs):
-        super(BNNLinear, self).__init__(*kargs, **kwargs)
-        self.register_buffer('weight_org', self.weight.data.clone())
-
-    def forward(self, input):
-
-        if (input.size(1) != 784) and (input.size(1) != 3072):
-            input.data=Binarize(input.data)
-            
-        self.weight.data=Binarize(self.weight_org)
-        out = linear(input, self.weight * self.weight_old)
-
-        if not self.bias is None:
-            self.bias.org=self.bias.data.clone()
-            out += self.bias.view(1, -1).expand_as(out)
-
-        return out
 
 class SparseGPT:
 
@@ -207,27 +175,9 @@ class SparseGPT:
 
         in_features = self.layer.in_features  # Get the number of input features of the old model
         out_features = self.layer.out_features  # Get the number of output features of the old model
-        
-
-        model = nn.Linear(in_features, out_features)  # Create a new linear model with the same specifications
-        model = model.to(self.dev)
-        model.weight.data = self.layer.weight.data.clone()  # Copy the weights from the old model to the new model
-        model.bias.data = self.layer.bias.data.clone()  # Copy the weights from the old model to the new model
-        self.lr = 1e-3
-        self.adam_epsilon = 1e-8
-        self.alpha = 5e-4
-        self.rho = 1e-2
-        optimizer = PruneAdam(model.named_parameters(), lr=self.lr, eps=self.adam_epsilon)
-        self.l1 = False
-        self.l2 = False
-        self.percent = [0.8, 0.92, 0.991, 0.93]
-        train(self, model, self.dev, self.inp1.clone(), self.out1.clone(), optimizer)
-        mask = apply_l1_prune(model, self.dev, self) if self.l1 else apply_prune(model, self.dev, self)
-        print_prune(model)
-        model.weight.data = model.weight.data.to(torch.float16)
-        model.bias.data = model.bias.data.to(torch.float16)
-        self.layer.weight.data = model.weight.data.clone()
-        self.layer.bias.data = model.bias.data.clone()
+        N, M = 4, 2
+        s = admm_solve(W, N, M)
+        self.layer.weight.data = s
         del model
         if DEBUG:
             print('error for admm:')
@@ -391,7 +341,7 @@ class SparseGPT:
 
         # apply mask from pgd
         out_features, in_features = self.layer.weight.shape
-        model = BNNLinear(in_features = in_features, out_features = out_features, bias = False).to(self.layer.weight.device)
+        model = None
         model.weight_old = self.layer.weight.data
         # nn.init.kaiming_normal_(model.weight, mode='fan_out')
         # nn.init.uniform_(model.weight, 0, 1)
@@ -501,7 +451,7 @@ class SparseGPT:
         # apply mask from pgd
         dtype = self.layer.weight.data.dtype
         out_features, in_features = self.layer.weight.shape
-        model = VRPGE_Linear(in_features=in_features, out_features=out_features, bias=True).to(self.dev)
+        model = VRPGE(in_features=in_features, out_features=out_features, bias=True).to(self.dev)
         model.weight.data = self.layer.weight.data.clone()
         model.bias.data = self.layer.bias.data.clone()
         input = self.inp1.clone().squeeze(0) 
@@ -517,7 +467,7 @@ class SparseGPT:
         with torch.enable_grad():
             model.train()
             print(f'orign subnet:{model.scores}')
-            VRPEG(model, 0.5, train_loader, self.dev)
+            VRPGE_solve(model, 0.5, train_loader, self.dev)
             print(f'final subnet:{model.scores}')
             print(f'ratio:{torch.sum(model.subnet)/ model.subnet.nelement()}')
         self.layer.weight.data = model.weight.data.clone().to(dtype)

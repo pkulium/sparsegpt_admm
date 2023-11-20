@@ -233,7 +233,7 @@ def assign_learning_rate(optimizer, new_lr):
         param_group["lr"] = new_lr
 
 import torch.optim as optim
-def VRPEG(model, keep_ratio, train_loader, device):
+def VRPGE_solve(model, keep_ratio, train_loader, device):
 
     def solve_v_total(model, total):
         k = total * keep_ratio
@@ -282,17 +282,17 @@ def VRPEG(model, keep_ratio, train_loader, device):
     score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
     weight_opt = None
 
-    # model.weight.requires_grad = True
-    # model.bias.requires_grad = True
-    # weight_lr = 0.01
-    # weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
-    # weight_opt = torch.optim.SGD(
-    #     weight_params,
-    #     weight_lr,
-    #     momentum=0.9,
-    #     weight_decay=5e-4,
-    #     nesterov=False,
-    # )
+    model.weight.requires_grad = True
+    model.bias.requires_grad = True
+    weight_lr = 0.01
+    weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
+    weight_opt = torch.optim.SGD(
+        weight_params,
+        weight_lr,
+        momentum=0.9,
+        weight_decay=5e-4,
+        nesterov=False,
+    )
 
     lr = 12e-3
     optimizer = torch.optim.Adam(
@@ -303,8 +303,8 @@ def VRPEG(model, keep_ratio, train_loader, device):
     K = 20
     lr_policy = cosine_lr(optimizer, 0, epochs, lr)
     for epoch in range(epochs):  # Number of epochs
-        # assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * lr)
-        # assign_learning_rate(weight_opt, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * weight_lr)
+        assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * lr)
+        assign_learning_rate(weight_opt, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * weight_lr)
         for i, (image, target) in enumerate(train_loader):
             image = image.cuda('cuda:0', non_blocking=True)
             target = target.cuda('cuda:0', non_blocking=True)
@@ -316,8 +316,8 @@ def VRPEG(model, keep_ratio, train_loader, device):
             for j in range(K):
                 model.j = j
                 output = model(image)
-                # original_loss = criterion(output, target)
-                original_loss = torch.sum((target - output) ** 2)
+                original_loss = criterion(output, target)
+                # original_loss = torch.sum((target - output) ** 2)
                 # print(f'original_loss:{original_loss}')
                 # print(f'subnet:{model.subnet}')
                 loss = original_loss/K

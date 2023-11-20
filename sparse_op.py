@@ -150,6 +150,50 @@ class VRPGELinear(nn.Linear):
             x = F.linear(x, self.weight, self.bias)
         return x
 
+class VRPGE(nn.Conv2d):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.scores = nn.Parameter(torch.Tensor(self.weight.size()[0], 1, 1, 1))
+        self.register_buffer('subnet', torch.zeros_like(self.scores))
+        self.train_weights = False
+        score_init_constant = 0.5
+        # self.scores.data = (
+        #     torch.ones_like(self.scores) * score_init_constant
+        # ) 
+        nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
+        if self.out_channels == 10 or self.out_channels == 100:
+            self.prune = False
+            self.subnet = torch.ones_like(self.scores)
+        else:
+            self.prune = True
+        self.register_buffer("stored_mask_0", torch.zeros_like(self.scores))
+        self.register_buffer("stored_mask_1", torch.zeros_like(self.scores))
+        self.j = 0
+
+    @property
+    def clamped_scores(self):
+        return self.scores
+
+    def fix_subnet(self):
+        self.subnet = (torch.rand_like(self.scores) < self.clamped_scores).float()
+
+    def forward(self, x):
+        if self.prune:
+            if not self.train_weights:
+                self.subnet = StraightThroughBinomialSampleNoGrad.apply(self.scores)
+                if self.j == 0:
+                    self.stored_mask_0.data = (self.subnet-self.scores)/torch.sqrt((self.scores+1e-20)*(1-self.scores+1e-20))
+                else:
+                    self.stored_mask_1.data = (self.subnet-self.scores)/torch.sqrt((self.scores+1e-20)*(1-self.scores+1e-20))
+                w = self.weight * self.subnet
+                x = F.conv2d(x, w, self.bias, self.stride, self.padding, self.dilation, self.groups)
+            else:
+                w = self.weight * self.subnet
+                x = F.conv2d(x, w, self.bias, self.stride, self.padding, self.dilation, self.groups)
+        else:
+            x = F.conv2d(x, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
+        return x
+
 class StraightThroughBinomialSampleNoGrad(autograd.Function):
     @staticmethod
     def forward(ctx, scores):
@@ -206,7 +250,7 @@ import math
 class VRPGE_Linear(nn.Linear):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.scores = nn.Parameter(torch.rand_like(self.weight))
+        self.scores = nn.Parameter(torch.rand_like(self.weight.size()[0]))
         self.register_buffer('subnet', torch.zeros_like(self.scores))
         self.train_weights = False
         # nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
@@ -255,3 +299,49 @@ class StraightThroughBinomialSampleNoGrad(autograd.Function):
     @staticmethod
     def backward(ctx, grad_outputs):
         return torch.zeros_like(grad_outputs)
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+import math
+DenseConv = nn.Conv2d
+
+class ProbMaskConv(nn.Conv2d):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.scores = nn.Parameter(torch.Tensor(self.weight.size()))  #Probability
+        self.subnet = None                                            #Mask
+        self.train_weights = False
+        score_init_constant = 0.5
+        self.scores.data = (
+            torch.ones_like(self.scores) * parser_args.score_init_constant
+        )
+        # nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
+        self.discrete = False
+        self.T = 0
+
+    @property
+    def clamped_scores(self):
+        return self.scores
+
+    def fix_subnet(self):
+        self.subnet = (torch.rand_like(self.scores) < self.clamped_scores).float()
+
+    def forward(self, x):
+        if not self.train_weights:                                      #training
+            if self.discrete:
+                eps = 1e-20
+                temp = self.T
+                uniform0 = torch.rand_like(self.scores)
+                uniform1 = torch.rand_like(self.scores)
+                noise = -torch.log(torch.log(uniform0 + eps) / torch.log(uniform1 + eps) + eps)
+                self.subnet = torch.sigmoid((torch.log(self.clamped_scores + eps) - torch.log(1.0 - self.clamped_scores + eps) + noise) * temp)
+            else:
+                self.subnet = (torch.rand_like(self.scores) < self.clamped_scores).float()
+            w = self.weight * self.subnet
+            x = F.conv2d(x, w, self.bias, self.stride, self.padding, self.dilation, self.groups)
+        else:                                                           #testing
+            w = self.weight * self.subnet
+            x = F.conv2d(x, w, self.bias, self.stride, self.padding, self.dilation, self.groups)
+        return x
