@@ -260,9 +260,8 @@ def faster_admm_solve(model, train_loader, rho=1, max_iter=1000, tol=1e-4):
     u = torch.zeros_like(model.weight.data)
 
     # Define the optimizer, loss function, and regularization strength
-    parameters = list(model.named_parameters())
     optimizer = torch.optim.Adam(
-        parameters, lr=0.1, weight_decay=1e-4
+        [model.weight], lr=0.01, weight_decay=1e-4
     )
     mse_loss = nn.MSELoss()
     # lambda_sparsity = 0.1  # Regularization strength for sparsity constraint
