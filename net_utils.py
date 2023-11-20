@@ -253,6 +253,10 @@ def admm_solve(z, N, M, rho=1, max_iter=1000, tol=1e-4):
         print(f'dual_res:{dual_res}')
     return s.view_as(z)
 
+def assign_learning_rate(optimizer, new_lr):
+    for param_group in optimizer.param_groups:
+        param_group["lr"] = new_lr
+
 def faster_admm_solve(model, train_loader, rho=0.1, max_iter=100, tol=1e-4):
     device = 'cuda:0'
     n, m = model.weight.shape
@@ -260,13 +264,15 @@ def faster_admm_solve(model, train_loader, rho=0.1, max_iter=100, tol=1e-4):
     u = torch.zeros_like(model.weight.data)
 
     # Define the optimizer, loss function, and regularization strength
+    lr = 0.1
     optimizer = torch.optim.Adam(
-        [model.weight], lr=0.01
+        [model.weight], lr=0.1
     )
     mse_loss = nn.MSELoss()
     # lambda_sparsity = 0.1  # Regularization strength for sparsity constraint
     # Assume train_loader is already defined and provides batches of (input, output_a)
     for epoch in range(max_iter):  # Number of epochs
+        assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / max_iter)) * lr)
         for input_tensor, label in train_loader:  # label is output_a
             # admm_adjust_learning_rate(optimizer, epoch, config)
             input_tensor, label = input_tensor.to(device), label.to(device)
