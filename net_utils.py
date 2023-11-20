@@ -12,7 +12,7 @@ import random
 TensorType = Union[torch.Tensor, np.ndarray]
 N, M = 2, 4
 
-DEBUG = False
+DEBUG = True
 def save_checkpoint(state, is_best, filename="checkpoint.pth", save=False, finetune=False):
     filename = pathlib.Path(filename)
     if not filename.parent.exists():
