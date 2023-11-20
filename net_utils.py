@@ -299,6 +299,7 @@ def faster_admm_solve(model, train_loader, rho=1, max_iter=100, tol=1e-4):
         print(f'model.weight:{model.weight}')
         print(f'primal_res:{primal_res}')
         print(f'dual_res:{dual_res}')
+    return W
 
 
 def constrainScoreByADMM(model, v_meter, max_score_meter):
