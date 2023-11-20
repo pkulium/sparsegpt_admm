@@ -253,7 +253,7 @@ def admm_solve(z, N, M, rho=1, max_iter=1000, tol=1e-4):
         print(f'dual_res:{dual_res}')
     return s.view_as(z)
 
-def faster_admm_solve(model, train_loader, rho=1, max_iter=100, tol=1e-4):
+def faster_admm_solve(model, train_loader, rho=0.1, max_iter=100, tol=1e-4):
     device = 'cuda:0'
     n, m = model.weight.shape
     W = torch.zeros_like(model.weight.data)
@@ -261,7 +261,7 @@ def faster_admm_solve(model, train_loader, rho=1, max_iter=100, tol=1e-4):
 
     # Define the optimizer, loss function, and regularization strength
     optimizer = torch.optim.Adam(
-        [model.weight], lr=0.01, weight_decay=1e-4
+        [model.weight], lr=0.01
     )
     mse_loss = nn.MSELoss()
     # lambda_sparsity = 0.1  # Regularization strength for sparsity constraint
