@@ -240,11 +240,6 @@ class ProbMaskLinear(nn.Linear):
         return x
 
 import numpy as np
-import torch
-import torch.autograd as autograd
-import torch.nn as nn
-import torch.nn.functional as F
-import math
 
 
 class VRPGE_Linear(nn.Linear):

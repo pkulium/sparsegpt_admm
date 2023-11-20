@@ -4,7 +4,6 @@ import shutil
 import math
 import torch
 import torch.nn as nn
-from args import args as parser_args
 from typing import Union, Dict, Tuple
 import numpy as np
 import random
@@ -89,7 +88,8 @@ def set_model_prune_rate(model, prune_rate):
             print(f"==> Setting prune rate of {n} to {prune_rate}")
 
 def solve_v(x):
-    k = x.nelement() * parser_args.prune_rate
+    prune_rate = 0.5
+    k = x.nelement() * prune_rate
     def f(v):
         return (x - v).clamp(0, 1).sum() - k
     if f(0) < 0:
@@ -111,7 +111,8 @@ def solve_v(x):
 
 
 def solve_v_total(model, total):
-    k = total * parser_args.prune_rate
+    prune_rate = 0.5
+    k = total * prune_rate
     a, b = 0, 0
     for n, m in model.named_modules():
         if hasattr(m, "scores") and m.prune:
