@@ -269,7 +269,7 @@ def faster_admm_solve(model, train_loader, rho=1, max_iter=1000, tol=1e-4):
     for epoch in range(max_iter):  # Number of epochs
         for input_tensor, label in train_loader:  # label is output_a
             # admm_adjust_learning_rate(optimizer, epoch, config)
-            data, target = data.to(device), target.to(device)
+            input_tensor, label = input_tensor.to(device), label.to(device)
             optimizer.zero_grad()
             # Forward pass
             output_model = model(input_tensor)
