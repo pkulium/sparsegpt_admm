@@ -22,7 +22,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import math
-from net_utils import admm_solve
+from net_utils import admm_solve, faster_admm_solve
 
 
 class SparseGPT:
@@ -181,6 +181,49 @@ class SparseGPT:
             print('error for admm:')
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
     
+    def faster_admm_prune(
+        self, sparsity, prunen=0, prunem=0, blocksize=128, percdamp=.01
+    ):
+        W = self.layer.weight.data.clone()
+        if isinstance(self.layer, nn.Conv2d):
+            W = W.flatten(1)
+        if isinstance(self.layer, transformers.Conv1D):
+            W = W.t()
+        W = W.float()
+
+        if hasattr(self, 'quantizer'):
+            if not self.quantizer.ready():
+                self.quantizer.find_params(W, weight=True)
+
+        tick = time.time()
+
+        del self.H
+        # apply mask from pgd
+        dtype = self.layer.weight.data.dtype
+        out_features, in_features = self.layer.weight.shape
+        model = nn.Linear(in_features=in_features, out_features=out_features, bias=False).to(self.dev)
+        model.weight.data = self.layer.weight.data.clone()
+        input = self.inp1.clone().squeeze(0) 
+        output = self.out1.clone().squeeze(0) 
+
+        input = input.to(torch.float32)  # Convert data to Float
+        output = output.to(torch.float32)  # Now output has shape [2048, 768]
+        model = model.to(torch.float32)  # Convert model parameters to Float
+
+        from torch.utils.data import TensorDataset, DataLoader
+        dataset = TensorDataset(input, output)
+        train_loader = DataLoader(dataset, batch_size=128, shuffle=True)
+        with torch.enable_grad():
+            model.train()
+            faster_admm_solve(model, train_loader)
+        self.layer.weight.data = model.weight.data.to(dtype)
+
+        del model
+        del dataset
+        del train_loader
+
+        if DEBUG:
+            print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
     
     def faster_snip_prune(
         self, sparsity, prunen=0, prunem=0, blocksize=128, percdamp=.01

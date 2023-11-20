@@ -253,6 +253,57 @@ def admm_solve(z, N, M, rho=1, max_iter=1000, tol=1e-4):
         print(f'dual_res:{dual_res}')
     return s.view_as(z)
 
+def faster_admm_solve(model, train_loader, rho=1, max_iter=1000, tol=1e-4):
+    device = 'cuda:0'
+    n, m = model.weight.shape
+    W = torch.zeros_like(model.weight.data)
+    u = torch.zeros_like(model.weight.data)
+
+    # Define the optimizer, loss function, and regularization strength
+    parameters = list(model.named_parameters())
+    # weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
+    score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
+    optimizer = torch.optim.Adam(
+        score_params, lr=0.01, weight_decay=1e-4
+    )
+    mse_loss = nn.MSELoss()
+    # lambda_sparsity = 0.1  # Regularization strength for sparsity constraint
+    # Assume train_loader is already defined and provides batches of (input, output_a)
+    for epoch in range(max_iter):  # Number of epochs
+        for input_tensor, label in train_loader:  # label is output_a
+            # admm_adjust_learning_rate(optimizer, epoch, config)
+            data, target = data.to(device), target.to(device)
+            optimizer.zero_grad()
+            # Forward pass
+            output_model = model(input_tensor)
+            # Compute the loss
+            loss_mse = mse_loss(output_model, label)  # Compare output_model with label (output_a)
+            admm_loss = 0.5*rho*(torch.norm(model.weight- W.data +u.data,p=2)**2)
+            loss_mse += admm_loss
+            loss_mse.backward()
+            optimizer.step()
+
+            # Update W
+            W_new = model.weight.data + u
+            scores = W_new.abs()
+            mask = maskNxM(scores, M, N)
+            W = mask * W_new
+
+            # Update u
+            u += model.weight.data - W
+
+            # Check for convergence
+            primal_res = torch.norm(model.weight.data - W)
+            dual_res = torch.norm(-rho * (W - W_new))
+
+            if primal_res < tol and dual_res < tol:
+                break
+    if DEBUG:
+        print(f'model.weight:{model.weight}')
+        print(f'primal_res:{primal_res}')
+        print(f'dual_res:{dual_res}')
+
+
 def constrainScoreByADMM(model, v_meter, max_score_meter):
     total = 0
     for n, m in model.named_modules():
