@@ -178,7 +178,6 @@ class SparseGPT:
         N, M = 2, 4
         s = admm_solve(W, N, M)
         self.layer.weight.data = s
-        del model
         if DEBUG:
             print('error for admm:')
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
