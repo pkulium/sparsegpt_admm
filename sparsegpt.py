@@ -175,7 +175,7 @@ class SparseGPT:
 
         in_features = self.layer.in_features  # Get the number of input features of the old model
         out_features = self.layer.out_features  # Get the number of output features of the old model
-        N, M = 4, 2
+        N, M = 2, 4
         s = admm_solve(W, N, M)
         self.layer.weight.data = s
         del model
