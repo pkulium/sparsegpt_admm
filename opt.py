@@ -114,6 +114,9 @@ def opt_sequential(model, dataloader, dev):
             # gpts[name].faster_vrpge_prune(
                 # sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
             # )
+            gpts[name].rho = args.rho
+            gpts[name].max_iter = args.rho
+            gpts[name].tol = args.rho
             gpts[name].admmprune(
                 sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
             )
@@ -311,7 +314,13 @@ if __name__ == '__main__':
        '--log_wandb', action='store_true',
        help='Whether to log to wandb.'
     )
-
+    parser.add_argument(
+        '--max_iter', type=int, default=0,
+    )
+    parser.add_argument(
+        '--rho', type=float, default=.01,
+    )
+    
     args = parser.parse_args()
 
     # init W&B logging

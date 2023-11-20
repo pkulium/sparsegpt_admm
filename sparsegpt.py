@@ -177,6 +177,7 @@ class SparseGPT:
         out_features = self.layer.out_features  # Get the number of output features of the old model
         N, M = 2, 4
         s = admm_solve(W, N, M)
+        # def admm_solve(z, N, M, rho=1, max_iter=1000, tol=1e-4)
         self.layer.weight.data = s.to(dtype=self.layer.weight.data.dtype)
         if DEBUG:
             print('error for admm:')
