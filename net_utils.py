@@ -219,7 +219,8 @@ def get_n_m_sparse_matrix(w):
     return mask
 
 def admm_solve(z, N, M, rho=1, max_iter=1000, tol=1e-4):
-    z_flattened = flatten_and_reshape(z, M)
+    # z_flattened = flatten_and_reshape(z, M)
+    z_flattened = z
     if DEBUG:
         print(f'z_flattened:{z_flattened}')
     n, m = z_flattened.shape
