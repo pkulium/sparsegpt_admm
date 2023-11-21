@@ -266,7 +266,7 @@ def faster_admm_solve(model, train_loader, original_weight, rho=0.1, max_iter=20
     # Define the optimizer, loss function, and regularization strength
     lr = 0.01
     optimizer = torch.optim.Adam(
-        [model.weight], lr=0.1
+        [model.weight], lr=lr
     )
     mse_loss = nn.MSELoss()
     gamma = 0.01
