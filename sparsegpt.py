@@ -497,7 +497,7 @@ class SparseGPT:
         out_features, in_features = self.layer.weight.shape
         # model = VRPGE(in_features=in_features, out_features=out_features, bias=True).to(self.dev)
         model = VRPGE(
-            in_planes = in_features, out_planes = out_features, kernel_size=1, stride=1, bias=False
+            in_features, out_features, kernel_size=1, stride=1, bias=False
         ).to(self.dev)
         model.weight.data = self.layer.weight.data.reshape(model.weight.shape)
         input = self.inp1.clone().squeeze(0) 
