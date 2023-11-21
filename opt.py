@@ -12,6 +12,7 @@ try:
     has_wandb = True
 except:
     has_wandb = False 
+import pickle
 
 
 def get_opt(model):
@@ -114,6 +115,8 @@ def opt_sequential(model, dataloader, dev):
             # gpts[name].faster_vrpge_prune(
                 # sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
             # )
+            gpts[name].input = args.layer_calibrations[name[11:]][0].squeeze(0) 
+            gpts[name].output = args.layer_calibrations[name[11:]][1].squeeze(0)
             gpts[name].rho = args.rho
             gpts[name].max_iter = args.rho
             gpts[name].tol = args.rho
@@ -322,7 +325,8 @@ if __name__ == '__main__':
     )
     
     args = parser.parse_args()
-
+    with open('layer_calibrations_opt_125m', 'rb') as f:
+        args.layer_calibrations = pickle.load(f)
     # init W&B logging
     if args.log_wandb:
         assert has_wandb, "wandb not installed try `pip install wandb`"
