@@ -283,7 +283,6 @@ def VRPGE_solve(model, keep_ratio, train_loader, device):
     weight_opt = None
 
     model.weight.requires_grad = True
-    model.bias.requires_grad = True
     weight_lr = 0.01
     weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
     weight_opt = torch.optim.SGD(
@@ -298,7 +297,7 @@ def VRPGE_solve(model, keep_ratio, train_loader, device):
     optimizer = torch.optim.Adam(
         score_params, lr=lr, weight_decay=0
     )
-    epochs = 1000
+    epochs = 100
     criterion = nn.MSELoss()
     K = 20
     lr_policy = cosine_lr(optimizer, 0, epochs, lr)

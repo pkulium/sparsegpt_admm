@@ -120,7 +120,7 @@ def opt_sequential(model, dataloader, dev):
             gpts[name].rho = args.rho
             gpts[name].max_iter = args.max_iter
             gpts[name].tol = args.rho
-            gpts[name].faster_admm_prune(
+            gpts[name].faster_vrpge_prune(
                 sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
             )
             # gpts[name].fasterprune(

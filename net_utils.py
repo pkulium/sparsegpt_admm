@@ -257,7 +257,8 @@ def assign_learning_rate(optimizer, new_lr):
     for param_group in optimizer.param_groups:
         param_group["lr"] = new_lr
 
-def faster_admm_solve(model, train_loader, original_weight, rho=0.1, max_iter=200, tol=1e-4):
+
+def faster_admm_solve(model, train_loader, original_weight, rho=0.001, max_iter=200, tol=1e-4):
     device = 'cuda:0'
     n, m = model.weight.shape
     W = torch.zeros_like(model.weight.data)
@@ -270,6 +271,7 @@ def faster_admm_solve(model, train_loader, original_weight, rho=0.1, max_iter=20
     )
     mse_loss = nn.MSELoss()
     gamma = 0.01
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max_iter*len(train_loader), eta_min=4e-08)
     # lambda_sparsity = 0.1  # Regularization strength for sparsity constraint
     # Assume train_loader is already defined and provides batches of (input, output_a)
     for epoch in range(max_iter):  # Number of epochs

@@ -495,9 +495,11 @@ class SparseGPT:
         # apply mask from pgd
         dtype = self.layer.weight.data.dtype
         out_features, in_features = self.layer.weight.shape
-        model = VRPGE(in_features=in_features, out_features=out_features, bias=True).to(self.dev)
-        model.weight.data = self.layer.weight.data.clone()
-        model.bias.data = self.layer.bias.data.clone()
+        # model = VRPGE(in_features=in_features, out_features=out_features, bias=True).to(self.dev)
+        model = VRPGE(
+            in_planes = in_features, out_planes = out_features, kernel_size=1, stride=1, bias=False
+        ).to(self.dev)
+        model.weight.data = self.layer.weight.data.reshape(model.weight.shape)
         input = self.inp1.clone().squeeze(0) 
         output = self.out1.clone().squeeze(0) 
 
@@ -507,7 +509,7 @@ class SparseGPT:
 
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
-        train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+        train_loader = DataLoader(dataset, batch_size=len(dataset), shuffle=True)
         with torch.enable_grad():
             model.train()
             print(f'orign subnet:{model.scores}')
