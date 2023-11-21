@@ -498,11 +498,13 @@ class SparseGPT:
         # model = VRPGE(in_features=in_features, out_features=out_features, bias=True).to(self.dev)
         model = VRPGE(
             in_features, out_features, kernel_size=1, stride=1, bias=False
-        ).to(self.dev)
-        model.weight.data = self.layer.weight.data.reshape(model.weight.shape)
+        ).to(self.dev)  
+        # Clone and reshape the input
+        input = self.inp1.clone().squeeze(0)
+        input = input.view(-1, in_features, 1, 1)  # Reshape to (2048, 768, 1, 1)
 
-        input = self.inp1.clone().squeeze(0) 
-        output = self.out1.clone().squeeze(0) 
+        # Clone and prepare the output
+        output = self.out1.clone().squeeze(0)
 
         input = input.to(torch.float32)  # Convert data to Float
         output = output.to(torch.float32)  # Now output has shape [2048, 768]
