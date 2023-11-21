@@ -519,8 +519,8 @@ class SparseGPT:
             VRPGE_solve(model, 0.5, train_loader, self.dev)
             # print(f'final subnet:{model.scores}')
             # print(f'ratio:{torch.sum(model.subnet)/ model.subnet.nelement()}')
-        self.layer.weight.data = model.weight.data.clone().to(dtype)
-        self.layer.weight[~model.subnet.data.bool()] = 0
+        # self.layer.weight.data = model.weight.data.clone().to(dtype)
+        # self.layer.weight[~model.subnet.data.bool()] = 0
 
 
         del model
@@ -531,7 +531,7 @@ class SparseGPT:
             # W = W.t()
         # self.layer.weight.data = W.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
         if DEBUG:
-            print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
+            print(torch.sum((model(input).view(self.out1.shape) - self.out1) ** 2))
     
 
     def free(self):
