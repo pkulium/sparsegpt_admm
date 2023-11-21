@@ -110,6 +110,8 @@ def opt_sequential(model, dataloader, dev):
         for name in gpts:
             print(i, name)
             print('Pruning ...')
+            if i == 1 and name == 'fc1':
+                print(f'gpts[name].inp1: {gpts[name].inp1} and gpts[name].out1: {gpts[name].out1}')
             sparsity = args.sparsity
             # gpts[name].faster_vrpge_prune(
                 # sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
