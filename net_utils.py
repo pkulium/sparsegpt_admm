@@ -269,6 +269,7 @@ def faster_admm_solve(model, train_loader, original_weight, rho=0.1, max_iter=10
         [model.weight], lr=0.1
     )
     mse_loss = nn.MSELoss()
+    gamma = 0.01
     # lambda_sparsity = 0.1  # Regularization strength for sparsity constraint
     # Assume train_loader is already defined and provides batches of (input, output_a)
     for epoch in range(max_iter):  # Number of epochs
@@ -280,7 +281,7 @@ def faster_admm_solve(model, train_loader, original_weight, rho=0.1, max_iter=10
             # Forward pass
             output_model = model(input_tensor)
             # Compute the loss
-            loss_mse = mse_loss(output_model, label) + mse_loss(model.weight, original_weight) # Compare output_model with label (output_a)
+            loss_mse = mse_loss(output_model, label) + gamma * mse_loss(model.weight, original_weight) # Compare output_model with label (output_a)
             admm_loss = 0.5*rho*(torch.norm(model.weight- W.data +u.data,p=2)**2)
             loss_mse += admm_loss
             loss_mse.backward()
