@@ -280,7 +280,7 @@ def faster_admm_solve(model, train_loader, W, rho=0.001, max_iter=100, tol=1e-4)
             # Forward pass
             output_model = model(input_tensor)
             # Compute the loss
-            loss_mse = mse_loss(output_model, label) + mse_loss(model.weight - W) # Compare output_model with label (output_a)
+            loss_mse = mse_loss(output_model, label) + mse_loss(model.weight, W) # Compare output_model with label (output_a)
             admm_loss = 0.5*rho*(torch.norm(model.weight- W.data +u.data,p=2)**2)
             loss_mse += admm_loss
             loss_mse.backward()
