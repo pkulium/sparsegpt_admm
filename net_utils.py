@@ -257,7 +257,7 @@ def assign_learning_rate(optimizer, new_lr):
     for param_group in optimizer.param_groups:
         param_group["lr"] = new_lr
 
-def faster_admm_solve(model, train_loader, rho=0.001, max_iter=100, tol=1e-4):
+def faster_admm_solve(model, train_loader, W, rho=0.001, max_iter=100, tol=1e-4):
     device = 'cuda:0'
     n, m = model.weight.shape
     W = torch.zeros_like(model.weight.data)
@@ -280,7 +280,7 @@ def faster_admm_solve(model, train_loader, rho=0.001, max_iter=100, tol=1e-4):
             # Forward pass
             output_model = model(input_tensor)
             # Compute the loss
-            loss_mse = mse_loss(output_model, label)  # Compare output_model with label (output_a)
+            loss_mse = mse_loss(output_model, label) + mse_loss(model.weight - W) # Compare output_model with label (output_a)
             admm_loss = 0.5*rho*(torch.norm(model.weight- W.data +u.data,p=2)**2)
             loss_mse += admm_loss
             loss_mse.backward()

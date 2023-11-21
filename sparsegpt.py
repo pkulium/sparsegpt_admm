@@ -215,7 +215,7 @@ class SparseGPT:
         train_loader = DataLoader(dataset, batch_size=128, shuffle=True)
         with torch.enable_grad():
             model.train()
-            w = faster_admm_solve(model, train_loader)
+            w = faster_admm_solve(model, train_loader, W)
         self.layer.weight.data = model.weight.data.to(dtype)
 
         del model
