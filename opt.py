@@ -325,9 +325,9 @@ if __name__ == '__main__':
     )
     
     args = parser.parse_args()
-    with open('layer_calibrations_opt_125m', 'rb') as f:
-        args.layer_calibrations = pickle.load(f)
-    print(args.layer_calibrations)
+    # with open('layer_calibrations_opt_125m', 'rb') as f:
+        # args.layer_calibrations = pickle.load(f)
+    # print(args.layer_calibrations)
     # init W&B logging
     if args.log_wandb:
         assert has_wandb, "wandb not installed try `pip install wandb`"
