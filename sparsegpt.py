@@ -500,6 +500,7 @@ class SparseGPT:
             in_features, out_features, kernel_size=1, stride=1, bias=False
         ).to(self.dev)
         model.weight.data = self.layer.weight.data.reshape(model.weight.shape)
+        print(f'shape {input.shape}')
         input = self.inp1.clone().squeeze(0) 
         output = self.out1.clone().squeeze(0) 
 
