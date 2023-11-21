@@ -257,7 +257,7 @@ def assign_learning_rate(optimizer, new_lr):
     for param_group in optimizer.param_groups:
         param_group["lr"] = new_lr
 
-def faster_admm_solve(model, train_loader, original_weight, rho=0.1, max_iter=1000, tol=1e-4):
+def faster_admm_solve(model, train_loader, original_weight, rho=0.1, max_iter=100, tol=1e-4):
     device = 'cuda:0'
     n, m = model.weight.shape
     W = torch.zeros_like(model.weight.data)
