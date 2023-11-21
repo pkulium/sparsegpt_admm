@@ -116,7 +116,7 @@ def opt_sequential(model, dataloader, dev):
                 # sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
             # )
             gpts[name].input = args.layer_calibrations[f'model.model.decoder.layers.{i}.{name}'][0].squeeze(0) 
-            gpts[name].output = args.layer_calibrations[f'model.model.decoder.layers{i}.{name}'][1].squeeze(0)
+            gpts[name].output = args.layer_calibrations[f'model.model.decoder.layers.{i}.{name}'][1].squeeze(0)
             gpts[name].rho = args.rho
             gpts[name].max_iter = args.rho
             gpts[name].tol = args.rho
