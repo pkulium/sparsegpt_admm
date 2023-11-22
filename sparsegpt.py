@@ -607,9 +607,8 @@ class SparseGPT:
         rho_values = [0.001, 0.01, 0.1]
         max_iter_values = [10, 100]
 
-        # lr_values = [0.1]
-        weight_lr_values = [0.1]
-        max_iter_values = [100]
+        lr_values = [0.006]
+        max_iter_values = [300]
 
         # Initialize variables to store the best hyperparameters and the corresponding minimum loss
         best_lr = None
@@ -626,7 +625,7 @@ class SparseGPT:
                     temp_model.train()
 
                     with torch.enable_grad():
-                        Probmask_solve(temp_model, 0.5, train_loader, self.dev, lr = lr)
+                        Probmask_solve(temp_model, 0.5, train_loader, self.dev, lr = lr, epochs=max_iter)
                     # Calculate loss
                     # temp_model.weight.data = temp_model.weight.data.to(self.layer.weight.data.dtype)
                     current_loss = torch.sum((temp_model(self.inp1.to(torch.float32)) - self.out1.to(torch.float32)) ** 2).item()

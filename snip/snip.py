@@ -324,9 +324,7 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
     parameters = list(model.named_parameters())
     model.weight.requires_grad = False
     score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
-    optimizer = torch.optim.Adam(
-        score_params, lr=lr, weight_decay=0
-    )
+    optimizer = torch.optim.Adam(score_params, lr=lr, weight_decay=0)
 
     weight_opt = None
     weight_lr = 0.01
@@ -370,9 +368,7 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
             optimizer.zero_grad()
             if weight_opt is not None:
                 weight_opt.zero_grad()
-            fn_list = []
             for j in range(K):
-                model.j = j
                 output = model(input)
                 # loss = criterion(output.view(target.shape), target) / K
                 loss = (torch.sum(output - target) ** 2) / K
