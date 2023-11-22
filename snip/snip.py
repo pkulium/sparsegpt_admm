@@ -340,7 +340,7 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
     # weight_opt = None
 
     criterion = nn.MSELoss()
-    K = 20
+    K = 2
     lr_policy = cosine_lr(optimizer, 0, epochs, lr)
     ts = 0.16
     pr_target = prune_rate
