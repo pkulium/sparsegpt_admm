@@ -345,6 +345,7 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
     pr_target = prune_rate
     pr_start = 1.0
     ts = int(ts * epochs)
+    te = 0.6
     te = int(te * epochs)
 
     for epoch in range(epochs):  # Number of epochs
