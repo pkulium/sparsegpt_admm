@@ -305,7 +305,6 @@ def faster_admm_solve(model, train_loader, original_weight, lr = 0.01, rho=0.01,
         if primal_res < tol and dual_res < tol:
             break
     if DEBUG:
-        print(f'model.weight:{model.weight}')
         print(f'primal_res:{primal_res}')
         print(f'dual_res:{dual_res}')
     return W
