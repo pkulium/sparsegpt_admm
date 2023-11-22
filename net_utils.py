@@ -11,7 +11,7 @@ import random
 TensorType = Union[torch.Tensor, np.ndarray]
 N, M = 2, 4
 
-DEBUG = False
+DEBUG = True
 def save_checkpoint(state, is_best, filename="checkpoint.pth", save=False, finetune=False):
     filename = pathlib.Path(filename)
     if not filename.parent.exists():
@@ -248,7 +248,6 @@ def admm_solve(z, N, M, rho=1, max_iter=1000, tol=1e-4):
         if primal_res < tol and dual_res < tol:
             break
     if DEBUG:
-        print(f's:{s}')
         print(f'primal_res:{primal_res}')
         print(f'dual_res:{dual_res}')
     return s.view_as(z)
