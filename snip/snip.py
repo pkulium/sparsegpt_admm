@@ -383,3 +383,4 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
                 model.scores.sub_(v).clamp_(0, 1)     
         # if epoch % 10 == 0:
             # print(f'loss: {loss}')
+    return model
