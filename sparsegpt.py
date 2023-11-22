@@ -607,7 +607,7 @@ class SparseGPT:
         weight_lr_values = [0]
         max_iter_values = [10, 100]
 
-        lr_values = [0.006]
+        lr_values = [0.1]
         weight_lr_values = [0]
         max_iter_values = [300]
 
