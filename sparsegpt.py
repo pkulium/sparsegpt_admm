@@ -619,7 +619,7 @@ class SparseGPT:
 
         # Grid search
         for lr in lr_values:
-            for rho in rho_values:
+            for weight_lr in weight_lr_values:
                 for max_iter in max_iter_values:
                     # Copy the model for each iteration to avoid cumulative training effects
                     temp_model = copy.deepcopy(model)
