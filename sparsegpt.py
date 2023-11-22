@@ -635,12 +635,12 @@ class SparseGPT:
                     if current_loss < min_loss:
                         min_loss = current_loss
                         best_lr = lr
-                        best_rho = rho
+                        best_weight_lr = weight_lr
                         best_max_iter = max_iter
                         self.layer.weight.data = (temp_model.subnet * temp_model.weight.data).to(dtype)
 
         # Print the best hyperparameters and the corresponding loss
-        print(f"Best lr: {best_lr}, Best rho: {best_rho}, Best max_iter: {best_max_iter}, Minimum Loss: {min_loss}")
+        print(f"Best lr: {best_lr}, Best best_weight_lr: {best_weight_lr}, Best max_iter: {best_max_iter}, Minimum Loss: {min_loss}")
 
         if DEBUG:
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
