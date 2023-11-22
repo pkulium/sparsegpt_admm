@@ -641,8 +641,6 @@ class SparseGPT:
 
         # Print the best hyperparameters and the corresponding loss
         print(f"Best lr: {best_lr}, Best rho: {best_rho}, Best max_iter: {best_max_iter}, Minimum Loss: {min_loss}")
-        print(f'self.layer.weight.data:{self.layer.weight.data}')
-
 
         if DEBUG:
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
