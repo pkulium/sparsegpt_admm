@@ -622,7 +622,7 @@ class SparseGPT:
                     temp_model.train()
 
                     with torch.enable_grad():
-                        mtemp_modelodel = Probmask_solve(temp_model, 0.1, train_loader, self.dev, lr = lr, epochs=max_iter)
+                        temp_model = Probmask_solve(temp_model, 0.5, train_loader, self.dev, lr = lr, epochs=max_iter)
                     # Calculate loss
                     # temp_model.weight.data = temp_model.weight.data.to(self.layer.weight.data.dtype)
                     current_loss = torch.sum((temp_model(self.inp1.to(torch.float32)) - self.out1.to(torch.float32)) ** 2).item()
