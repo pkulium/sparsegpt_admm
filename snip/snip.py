@@ -322,22 +322,20 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
         return _lr_adjuster
     
     parameters = list(model.named_parameters())
-    model.weight.requires_grad = False
     score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
     optimizer = torch.optim.Adam(score_params, lr=lr, weight_decay=0)
 
     weight_opt = None
     weight_lr = 0.01
-    model.weight.requires_grad = False
-    # weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
-    # weight_opt = torch.optim.SGD(
-    #     weight_params,
-    #     weight_lr,
-    #     momentum=0.9,
-    #     weight_decay=5e-4,
-    #     nesterov=False,
-    # )
-    # weight_opt = None
+    model.weight.requires_grad = True
+    weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
+    weight_opt = torch.optim.SGD(
+        weight_params,
+        weight_lr,
+        momentum=0.9,
+        weight_decay=5e-4,
+        nesterov=False,
+    )
 
     criterion = nn.MSELoss()
     K = 2
