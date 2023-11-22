@@ -607,6 +607,10 @@ class SparseGPT:
         rho_values = [0.001, 0.01, 0.1]
         max_iter_values = [10, 100]
 
+        lr_values = [0.1]
+        weight_lr_values = [0.1]
+        max_iter_values = [100]
+
         # Initialize variables to store the best hyperparameters and the corresponding minimum loss
         best_lr = None
         best_rho = None
