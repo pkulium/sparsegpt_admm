@@ -112,17 +112,17 @@ def opt_sequential(model, dataloader, dev):
             print(i, name)
             print('Pruning ...')
             sparsity = args.sparsity
-            # gpts[name].faster_vrpge_prune(
-                # sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
-            # )
-            gpts[name].input = args.layer_calibrations[f'model.model.decoder.layers.{i}.{name}'][0].squeeze(0) 
-            gpts[name].output = args.layer_calibrations[f'model.model.decoder.layers.{i}.{name}'][1].squeeze(0)
-            gpts[name].rho = args.rho
-            gpts[name].max_iter = args.max_iter
-            gpts[name].tol = args.rho
-            gpts[name].faster_vrpge_prune(
+            gpts[name].faster_admm_prune(
                 sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
             )
+            # gpts[name].input = args.layer_calibrations[f'model.model.decoder.layers.{i}.{name}'][0].squeeze(0) 
+            # gpts[name].output = args.layer_calibrations[f'model.model.decoder.layers.{i}.{name}'][1].squeeze(0)
+            # gpts[name].rho = args.rho
+            # gpts[name].max_iter = args.max_iter
+            # gpts[name].tol = args.rho
+            # gpts[name].faster_vrpge_prune(
+            #     sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
+            # )
             # gpts[name].fasterprune(
             #     sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
             # )

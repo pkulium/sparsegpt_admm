@@ -203,10 +203,10 @@ class SparseGPT:
         out_features, in_features = self.layer.weight.shape
         model = nn.Linear(in_features=in_features, out_features=out_features, bias=False).to(self.dev)
         model.weight.data = self.layer.weight.data.clone()
-        # input = self.inp1.clone().squeeze(0) 
-        # output = self.out1.clone().squeeze(0) 
-        input = self.input.clone().squeeze(0) 
-        output = self.output.clone().squeeze(0) 
+        input = self.inp1.clone().squeeze(0) 
+        output = self.out1.clone().squeeze(0) 
+        # input = self.input.clone().squeeze(0) 
+        # output = self.output.clone().squeeze(0) 
 
         input = input.to(torch.float32)  # Convert data to Float
         output = output.to(torch.float32)  # Now output has shape [2048, 768]
