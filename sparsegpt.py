@@ -218,9 +218,13 @@ class SparseGPT:
         train_loader = DataLoader(dataset, batch_size=len(dataset), shuffle=True)
 
         # Define your hyperparameter grids
-        lr_values = [0.001, 0.01, 0.1]
-        rho_values = [0.001, 0.01, 0.1]
-        max_iter_values = [100, 200, 300]
+        # lr_values = [0.001, 0.01, 0.1]
+        # rho_values = [0.001, 0.01, 0.1]
+        # max_iter_values = [100, 200, 300]
+
+        lr_values = [0.001]
+        rho_values = [0.001]
+        max_iter_values = [300]
 
         # Initialize variables to store the best hyperparameters and the corresponding minimum loss
         best_lr = None
@@ -239,7 +243,8 @@ class SparseGPT:
                     with torch.enable_grad():
                         w = faster_admm_solve(temp_model, train_loader, W, lr=lr, rho=rho, max_iter=max_iter, tol=1e-4)
                     # Calculate loss
-                    temp_model.weight.data = temp_model.weight.data.to(self.layer.weight.data.dtype)
+                    # temp_model.weight.data = temp_model.weight.data.to(self.layer.weight.data.dtype)
+                    temp_model.weight.data = w.to(self.layer.weight.data.dtype)
                     current_loss = torch.sum((temp_model(self.inp1) - self.out1) ** 2).item()
 
                     # Update best hyperparameters if current loss is lower
