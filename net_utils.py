@@ -290,7 +290,7 @@ def faster_admm_solve(model, train_loader, original_weight, rho=0.01, max_iter=2
             loss_mse += admm_loss
             loss_mse.backward()
             optimizer.step()
-
+        scheduler.step()
         # Update W
         with torch.no_grad():
             values = model.weight.data + u
