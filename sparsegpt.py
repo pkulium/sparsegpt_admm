@@ -609,7 +609,7 @@ class SparseGPT:
 
         lr_values = [0.1]
         weight_lr_values = [0]
-        max_iter_values = [300]
+        max_iter_values = [100]
 
         # Initialize variables to store the best hyperparameters and the corresponding minimum loss
         best_lr = None
