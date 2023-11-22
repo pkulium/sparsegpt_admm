@@ -234,6 +234,8 @@ class ProbMaskLinear(nn.Linear):
             uniform1 = torch.rand_like(self.scores)
             noise = -torch.log(torch.log(uniform0 + eps) / torch.log(uniform1 + eps) + eps)
             self.subnet = torch.sigmoid((torch.log(self.clamped_scores + eps) - torch.log(1.0 - self.clamped_scores + eps) + noise) * temp)
+            w = self.weight * self.subnet
+            x = F.linear(x, w, self.bias)
         else:  # testing
             w = self.weight * self.subnet
             x = F.linear(x, w, self.bias)
