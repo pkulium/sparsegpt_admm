@@ -258,7 +258,7 @@ def assign_learning_rate(optimizer, new_lr):
         param_group["lr"] = new_lr
 
 
-def faster_admm_solve(model, train_loader, original_weight, rho=0.001, max_iter=200, tol=1e-4):
+def faster_admm_solve(model, train_loader, original_weight, rho=0.01, max_iter=200, tol=1e-4):
     device = 'cuda:0'
     n, m = model.weight.shape
     W = torch.zeros_like(model.weight.data)
@@ -286,26 +286,26 @@ def faster_admm_solve(model, train_loader, original_weight, rho=0.001, max_iter=
             # loss_mse = mse_loss(output_model, label) + gamma * mse_loss(model.weight, original_weight) # Compare output_model with label (output_a)
             loss_mse = torch.sum((output_model - label) ** 2)
             # loss_mse += gamma * torch.sum((model.weight - original_weight) ** 2)
-            admm_loss = 0.5*rho*(torch.norm(model.weight- W.data +u.data,p=2)**2)
+            admm_loss = 0.5*rho*torch.linalg.norm(model.weight - W + u, "fro") ** 2
             loss_mse += admm_loss
             loss_mse.backward()
             optimizer.step()
 
-            # Update W
-            W_new = model.weight.data + u
-            scores = W_new.abs()
+        # Update W
+        with torch.no_grad():
+            values = model.weight.data + u
+            scores = values.abs()
             mask = maskNxM(scores, M, N)
-            W = mask * W_new
+            W = mask * values
 
-            # Update u
-            u += model.weight.data - W
+        # Update u
+        u += model.weight.data - W
 
-            # Check for convergence
-            primal_res = torch.norm(model.weight.data - W)
-            dual_res = torch.norm(-rho * (W - W_new))
-
-            if primal_res < tol and dual_res < tol:
-                break
+        # Check for convergence
+        primal_res = torch.norm(model.weight.data - W)
+        dual_res = torch.norm(-rho * (W - values))
+        if primal_res < tol and dual_res < tol:
+            break
     if DEBUG:
         print(f'model.weight:{model.weight}')
         print(f'primal_res:{primal_res}')
