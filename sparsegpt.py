@@ -613,7 +613,7 @@ class SparseGPT:
 
         # Initialize variables to store the best hyperparameters and the corresponding minimum loss
         best_lr = None
-        best_rho = None
+        best_weight_lr = None
         best_max_iter = None
         min_loss = float('inf')
 
