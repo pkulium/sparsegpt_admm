@@ -330,16 +330,16 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
 
     weight_opt = None
     weight_lr = 0.01
-    model.weight.requires_grad = True
-    weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
-    weight_opt = torch.optim.SGD(
-        weight_params,
-        weight_lr,
-        momentum=0.9,
-        weight_decay=5e-4,
-        nesterov=False,
-    )
-    weight_opt = None
+    model.weight.requires_grad = False
+    # weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
+    # weight_opt = torch.optim.SGD(
+    #     weight_params,
+    #     weight_lr,
+    #     momentum=0.9,
+    #     weight_decay=5e-4,
+    #     nesterov=False,
+    # )
+    # weight_opt = None
 
     criterion = nn.MSELoss()
     K = 20
