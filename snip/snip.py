@@ -364,7 +364,6 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
             model.prune_rate = pr_target
         model.T = 1 / ((1 - 0.03) * (1 - epoch / epochs) + 0.03)
 
-        model.train()
         for i, (image, target) in enumerate(train_loader):
             image = image.cuda('cuda:0', non_blocking=True)
             target = target.cuda('cuda:0', non_blocking=True)
