@@ -277,7 +277,7 @@ def VRPGE_solve(model, keep_ratio, train_loader, device):
             print(f'loss: {loss}')
 
 
-def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs = 100):
+def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs = 100, weight_lr = 0.1):
     def solve_v_total(model, total):
         k = total * prune_rate
         a, b = 0, 0
@@ -326,7 +326,6 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
     optimizer = torch.optim.Adam(score_params, lr=lr, weight_decay=0)
 
     weight_opt = None
-    weight_lr = 0.01
     model.weight.requires_grad = True
     weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
     weight_opt = torch.optim.SGD(

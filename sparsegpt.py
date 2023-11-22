@@ -604,7 +604,7 @@ class SparseGPT:
 
         # Define your hyperparameter grids
         lr_values = [0.001, 0.01, 0.1]
-        weight_lr_values = [0]
+        weight_lr_values = [0.001, 0.01, 0.1]
         max_iter_values = [100, 300]
 
         # Initialize variables to store the best hyperparameters and the corresponding minimum loss
