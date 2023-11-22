@@ -631,6 +631,8 @@ class SparseGPT:
                     # temp_model.weight.data = temp_model.weight.data.to(self.layer.weight.data.dtype)
                     current_loss = torch.sum((temp_model(self.inp1.to(torch.float32)) - self.out1.to(torch.float32)) ** 2).item()
 
+                    if best_lr is None:
+                        self.layer.weight.data = (temp_model.subnet * temp_model.weight.data).to(dtype)
                     # Update best hyperparameters if current loss is lower
                     if current_loss < min_loss:
                         min_loss = current_loss
