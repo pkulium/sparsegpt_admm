@@ -198,6 +198,7 @@ class SparseGPT:
         tick = time.time()
 
         del self.H
+
         # apply mask from pgd
         dtype = self.layer.weight.data.dtype
         out_features, in_features = self.layer.weight.shape
@@ -215,11 +216,41 @@ class SparseGPT:
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
         train_loader = DataLoader(dataset, batch_size=len(dataset), shuffle=True)
-        with torch.enable_grad():
-            model.train()
-            w = faster_admm_solve(model, train_loader, W)
-        # self.layer.weight.data = model.weight.data.to(dtype)
-        self.layer.weight.data = w.to(dtype)
+
+        # Define your hyperparameter grids
+        lr_values = [0.001, 0.01, 0.1]
+        rho_values = [0.001, 0.01, 0.1]
+        max_iter_values = [100, 200, 300]
+
+        # Initialize variables to store the best hyperparameters and the corresponding minimum loss
+        best_lr = None
+        best_rho = None
+        best_max_iter = None
+        min_loss = float('inf')
+
+        # Grid search
+        for lr in lr_values:
+            for rho in rho_values:
+                for max_iter in max_iter_values:
+                    # Copy the model for each iteration to avoid cumulative training effects
+                    temp_model = copy.deepcopy(model)
+                    temp_model.train()
+
+                    with torch.enable_grad():
+                        w = faster_admm_solve(temp_model, train_loader, W, lr=lr, rho=rho, max_iter=max_iter, tol=1e-4)
+                    # Calculate loss
+                    current_loss = torch.sum((temp_model(self.inp1) - self.out1) ** 2).item()
+
+                    # Update best hyperparameters if current loss is lower
+                    if current_loss < min_loss:
+                        min_loss = current_loss
+                        best_lr = lr
+                        best_rho = rho
+                        best_max_iter = max_iter
+
+        # Print the best hyperparameters and the corresponding loss
+        print(f"Best lr: {best_lr}, Best rho: {best_rho}, Best max_iter: {best_max_iter}, Minimum Loss: {min_loss}")
+        
 
         del model
         del dataset
