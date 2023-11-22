@@ -258,21 +258,18 @@ def assign_learning_rate(optimizer, new_lr):
         param_group["lr"] = new_lr
 
 
-def faster_admm_solve(model, train_loader, original_weight, rho=0.01, max_iter=200, tol=1e-4):
+def faster_admm_solve(model, train_loader, original_weight, lr = 0.01, rho=0.01, max_iter=200, tol=1e-4):
     device = 'cuda:0'
     n, m = model.weight.shape
     W = torch.zeros_like(model.weight.data)
     u = torch.zeros_like(model.weight.data)
 
-    # Define the optimizer, loss function, and regularization strength
-    lr = 0.01
-    optimizer = torch.optim.Adam(
-        [model.weight], lr=lr
-    )
-    mse_loss = nn.MSELoss()
-    gamma = 0.01
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max_iter*len(train_loader), eta_min=4e-08)
-    # lambda_sparsity = 0.1  # Regularization strength for sparsity constraint
+    # Define the optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    # Define the learning rate scheduler
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max_iter)
+
+
     # Assume train_loader is already defined and provides batches of (input, output_a)
     for epoch in range(max_iter):  # Number of epochs
         assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / max_iter)) * lr)
@@ -283,14 +280,16 @@ def faster_admm_solve(model, train_loader, original_weight, rho=0.01, max_iter=2
             # Forward pass
             output_model = model(input_tensor)
             # Compute the loss
-            # loss_mse = mse_loss(output_model, label) + gamma * mse_loss(model.weight, original_weight) # Compare output_model with label (output_a)
+            # loss_mse = mse_loss(output_model, label) 
             loss_mse = torch.sum((output_model - label) ** 2)
-            # loss_mse += gamma * torch.sum((model.weight - original_weight) ** 2)
             admm_loss = 0.5*rho*torch.linalg.norm(model.weight - W + u, "fro") ** 2
             loss_mse += admm_loss
             loss_mse.backward()
             optimizer.step()
+            
+        # Update the learning rate
         scheduler.step()
+
         # Update W
         with torch.no_grad():
             values = model.weight.data + u
