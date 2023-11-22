@@ -247,6 +247,7 @@ class SparseGPT:
                         best_lr = lr
                         best_rho = rho
                         best_max_iter = max_iter
+                        self.layer.weight.data = model.weight.data
 
         # Print the best hyperparameters and the corresponding loss
         print(f"Best lr: {best_lr}, Best rho: {best_rho}, Best max_iter: {best_max_iter}, Minimum Loss: {min_loss}")
