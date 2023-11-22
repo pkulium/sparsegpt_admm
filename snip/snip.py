@@ -300,8 +300,8 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
                 a = v
         v = max(0, v)
         return v, itr
+    
     import numpy as np
-
     def _warmup_lr(base_lr, warmup_length, epoch):
         return base_lr * (epoch + 1) / warmup_length
     
@@ -368,7 +368,6 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
         for i, (image, target) in enumerate(train_loader):
             image = image.cuda('cuda:0', non_blocking=True)
             target = target.cuda('cuda:0', non_blocking=True)
-            l = 0
             optimizer.zero_grad()
             if weight_opt is not None:
                 weight_opt.zero_grad()
@@ -376,13 +375,8 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
             for j in range(K):
                 model.j = j
                 output = model(image)
-                original_loss = criterion(output.view(target.shape), target)
-                loss = original_loss/K
-                fn_list.append(loss.item()*K)
-                loss.backward(retain_graph=True)
-                l = l + loss.item()
-            fn_avg = l
-            model.scores.grad.data += 1/(K-1)*(fn_list[0] - fn_avg)*getattr(model, 'stored_mask_0') + 1/(K-1)*(fn_list[1] - fn_avg)*getattr(model, 'stored_mask_1')
+                loss = criterion(output.view(target.shape), target) / K
+                loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 3)
             optimizer.step()
             if weight_opt is not None:
