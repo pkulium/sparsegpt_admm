@@ -643,24 +643,13 @@ class SparseGPT:
         print(f"Best lr: {best_lr}, Best rho: {best_rho}, Best max_iter: {best_max_iter}, Minimum Loss: {min_loss}")
         print(f'self.layer.weight.data:{self.layer.weight.data}')
 
-        del model
-        del dataset
-        del train_loader
 
         if DEBUG:
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
     
-
-
         del model
         del dataset
         del train_loader
-
-        # if isinstance(self.layer, transformers.Conv1D):
-            # W = W.t()
-        # self.layer.weight.data = W.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
-        if DEBUG:
-            print(torch.sum((model(input).view(self.out1.shape) - self.out1) ** 2))
 
     def free(self):
         if DEBUG:

@@ -364,8 +364,8 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
             model.prune_rate = pr_target
         model.T = 1 / ((1 - 0.03) * (1 - epoch / epochs) + 0.03)
 
-        for i, (image, target) in enumerate(train_loader):
-            image = image.cuda('cuda:0', non_blocking=True)
+        for i, (input, target) in enumerate(train_loader):
+            input = input.cuda('cuda:0', non_blocking=True)
             target = target.cuda('cuda:0', non_blocking=True)
             optimizer.zero_grad()
             if weight_opt is not None:
@@ -373,8 +373,9 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
             fn_list = []
             for j in range(K):
                 model.j = j
-                output = model(image)
-                loss = criterion(output.view(target.shape), target) / K
+                output = model(input)
+                # loss = criterion(output.view(target.shape), target) / K
+                loss = (torch.sum(output - target) ** 2) / K
                 loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 3)
             optimizer.step()
