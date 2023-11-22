@@ -157,67 +157,6 @@ def PGD(net, keep_ratio, train_dataloader, device):
     # return keep_masks
 
 
-import torch.optim as optim
-def pro_mask(model, keep_ratio, train_dataloader, device):
-   # Define the optimizer, you can use any optimizer of your choice
-    prune_rate = 0.5
-    def solve_v_total(model, total):
-        k = total * prune_rate
-        a, b = 0, 0
-        b = max(b, model.scores.max())
-        def f(v):
-            s = 0
-            s += (model.scores - v).clamp(0, 1).sum()
-            return s - k
-        if f(0) < 0:
-            return 0
-        itr = 0
-        while (1):
-            itr += 1
-            v = (a + b) / 2
-            obj = f(v)
-            if abs(obj) < 1e-3 or itr > 20:
-                break
-            if obj < 0:
-                b = v
-            else:
-                a = v
-        v = max(0, v)
-        return v
-    
-    import torch.optim as optim
-    model.train_weights = False
-    model.weight.requires_grad = False
-    model.bias.requires_grad = False
-
-    # Define the optimizer, loss function, and regularization strength
-    parameters = list(model.named_parameters())
-    # weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
-    score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
-    optimizer = torch.optim.Adam(
-        score_params, lr=0.01, weight_decay=1e-4
-    )
-    mse_loss = nn.MSELoss()
-    # lambda_sparsity = 0.1  # Regularization strength for sparsity constraint
-    # Assume train_loader is already defined and provides batches of (input, output_a)
-    for epoch in range(10):  # Number of epochs
-        for input_tensor, label in train_dataloader:  # label is output_a
-            optimizer.zero_grad()
-            # Forward pass
-            output_model = model(input_tensor)
-            # Compute the loss
-            loss_mse = mse_loss(output_model, label)  # Compare output_model with label (output_a)
-            loss_mse.backward()
-            optimizer.step()
-            with torch.no_grad():
-                total = model.scores.nelement()
-                v = solve_v_total(model, total)
-                model.scores.sub_(v).clamp_(0, 1)
-
-        # Print the loss values at the end of each epoch
-        # print(f"Epoch {epoch}, MSE Loss: {loss_mse.item()}, Sparsity Constraint: {sparsity_constraint.item()}, Total Loss: {loss.item()}")
-
-
 def adjust_learning_rate(optimizer, epoch):
     lr = 0.1
     lr_schedule = [56,71]
@@ -337,3 +276,116 @@ def VRPGE_solve(model, keep_ratio, train_loader, device):
         if epoch % 50 == 0:
             print(f'loss: {loss}')
 
+
+def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs = 100):
+    def solve_v_total(model, total):
+        k = total * prune_rate
+        a, b = 0, 0
+        b = max(b, model.scores.max())
+        def f(v):
+            s = (model.scores - v).clamp(0, 1).sum()
+            return s - k
+        if f(0) < 0:
+            return 0, 0
+        itr = 0
+        while (1):
+            itr += 1
+            v = (a + b) / 2
+            obj = f(v)
+            if abs(obj) < 1e-3 or itr > 20:
+                break
+            if obj < 0:
+                b = v
+            else:
+                a = v
+        v = max(0, v)
+        return v, itr
+    import numpy as np
+
+    def _warmup_lr(base_lr, warmup_length, epoch):
+        return base_lr * (epoch + 1) / warmup_length
+    
+    def assign_learning_rate(optimizer, new_lr):
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = new_lr
+
+    def cosine_lr(optimizer, warmup_length, epochs, lr):
+        def _lr_adjuster(epoch, iteration, lr):
+            if epoch < warmup_length:
+                lr = _warmup_lr(lr, warmup_length, epoch)
+            else:
+                e = epoch - warmup_length
+                es = epochs - warmup_length
+                lr = 0.5 * (1 + np.cos(np.pi * e / es)) * lr
+            assign_learning_rate(optimizer, lr)
+            return lr
+        return _lr_adjuster
+    
+    parameters = list(model.named_parameters())
+    score_params = [v for n, v in parameters if ("score" in n) and v.requires_grad]
+
+    weight_opt = None
+    weight_lr = 0.01
+    # model.weight.requires_grad = True
+    # weight_params = [v for n, v in parameters if ("score" not in n) and v.requires_grad]
+    # weight_opt = torch.optim.SGD(
+    #     weight_params,
+    #     weight_lr,
+    #     momentum=0.9,
+    #     weight_decay=5e-4,
+    #     nesterov=False,
+    # )
+    optimizer = torch.optim.Adam(
+        score_params, lr=lr, weight_decay=0
+    )
+    criterion = nn.MSELoss()
+    K = 20
+    lr_policy = cosine_lr(optimizer, 0, epochs, lr)
+    ts = 0.16
+    pr_target = prune_rate
+    pr_start = 1.0
+    ts = int(ts * epochs)
+    te = int(te * epochs)
+
+    for epoch in range(epochs):  # Number of epochs
+
+        assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * lr)
+        if weight_opt:
+            assign_learning_rate(weight_opt, 0.5 * (1 + np.cos(np.pi * epoch / epochs)) * weight_lr)
+        if epoch < ts:
+            model.prune_rate = 1
+        elif epoch < te:
+            model.prune_rate = pr_target + (pr_start - pr_target)*(1-(epoch-ts)/(te-ts))**3
+        else:
+            model.prune_rate = pr_target
+        model.T = 1 / ((1 - 0.03) * (1 - epoch / epochs) + 0.03)
+
+        model.train()
+        for i, (image, target) in enumerate(train_loader):
+            image = image.cuda('cuda:0', non_blocking=True)
+            target = target.cuda('cuda:0', non_blocking=True)
+            l = 0
+            optimizer.zero_grad()
+            if weight_opt is not None:
+                weight_opt.zero_grad()
+            fn_list = []
+            for j in range(K):
+                model.j = j
+                output = model(image)
+                original_loss = criterion(output.view(target.shape), target)
+                loss = original_loss/K
+                fn_list.append(loss.item()*K)
+                loss.backward(retain_graph=True)
+                l = l + loss.item()
+            fn_avg = l
+            model.scores.grad.data += 1/(K-1)*(fn_list[0] - fn_avg)*getattr(model, 'stored_mask_0') + 1/(K-1)*(fn_list[1] - fn_avg)*getattr(model, 'stored_mask_1')
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 3)
+            optimizer.step()
+            if weight_opt is not None:
+                weight_opt.step()
+            with torch.no_grad():
+                total = model.scores.nelement()
+                v, itr = solve_v_total(model, total)
+                model.scores.sub_(v).clamp_(0, 1)     
+        if epoch % 10 == 0:
+            print(f'loss: {loss}')

@@ -566,7 +566,98 @@ class SparseGPT:
         # self.layer.weight.data = W.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
         if DEBUG:
             print(torch.sum((model(input).view(self.out1.shape) - self.out1) ** 2))
+
+    def faster_probmask_prune(
+        self, sparsity, prunen=0, prunem=0, blocksize=128, percdamp=.01
+    ):
+        W = self.layer.weight.data.clone()
+        if isinstance(self.layer, nn.Conv2d):
+            W = W.flatten(1)
+        if isinstance(self.layer, transformers.Conv1D):
+            W = W.t()
+        W = W.float()
+
+        if hasattr(self, 'quantizer'):
+            if not self.quantizer.ready():
+                self.quantizer.find_params(W, weight=True)
+
+        tick = time.time()
+        del self.H
+
+        # apply mask from pgd
+        dtype = self.layer.weight.data.dtype
+        out_features, in_features = self.layer.weight.shape
+        # model = VRPGE(in_features=in_features, out_features=out_features, bias=True).to(self.dev)
+        model = ProbMaskLinear(in_features, out_features, bias=False).to(self.dev)  
+        model.weight.data = self.layer.weight.data
+        # Clone and reshape the input
+        input = self.inp1.clone().squeeze(0) 
+        output = self.out1.clone().squeeze(0) 
+
+        input = input.to(torch.float32)  # Convert data to Float
+        output = output.to(torch.float32)  # Now output has shape [2048, 768]
+        model = model.to(torch.float32)  # Convert model parameters to Float
+
+        from torch.utils.data import TensorDataset, DataLoader
+        dataset = TensorDataset(input, output)
+        train_loader = DataLoader(dataset, batch_size=len(dataset), shuffle=True)
+
+        # Define your hyperparameter grids
+        lr_values = [0.001, 0.01, 0.1]
+        rho_values = [0.001, 0.01, 0.1]
+        max_iter_values = [10, 100]
+
+        # Initialize variables to store the best hyperparameters and the corresponding minimum loss
+        best_lr = None
+        best_rho = None
+        best_max_iter = None
+        min_loss = float('inf')
+
+        # Grid search
+        for lr in lr_values:
+            for rho in rho_values:
+                for max_iter in max_iter_values:
+                    # Copy the model for each iteration to avoid cumulative training effects
+                    temp_model = copy.deepcopy(model)
+                    temp_model.train()
+
+                    with torch.enable_grad():
+                        Probmask_solve(temp_model, 0.5, train_loader, self.dev)
+                    # Calculate loss
+                    # temp_model.weight.data = temp_model.weight.data.to(self.layer.weight.data.dtype)
+                    temp_model.weight.data = temp_model.weight.data.to(dtype)
+                    current_loss = torch.sum((temp_model(self.inp1) - self.out1) ** 2).item()
+
+                    # Update best hyperparameters if current loss is lower
+                    if current_loss < min_loss:
+                        min_loss = current_loss
+                        best_lr = lr
+                        best_rho = rho
+                        best_max_iter = max_iter
+                        self.layer.weight.data = temp_model.subnet * temp_model.weight.data
+
+        # Print the best hyperparameters and the corresponding loss
+        print(f"Best lr: {best_lr}, Best rho: {best_rho}, Best max_iter: {best_max_iter}, Minimum Loss: {min_loss}")
+        print(f'self.layer.weight.data:{self.layer.weight.data}')
+
+        del model
+        del dataset
+        del train_loader
+
+        if DEBUG:
+            print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
     
+
+
+        del model
+        del dataset
+        del train_loader
+
+        # if isinstance(self.layer, transformers.Conv1D):
+            # W = W.t()
+        # self.layer.weight.data = W.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
+        if DEBUG:
+            print(torch.sum((model(input).view(self.out1.shape) - self.out1) ** 2))
 
     def free(self):
         if DEBUG:

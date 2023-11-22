@@ -310,7 +310,7 @@ class ProbMaskConv(nn.Conv2d):
         self.train_weights = False
         score_init_constant = 0.5
         self.scores.data = (
-            torch.ones_like(self.scores) * parser_args.score_init_constant
+            torch.ones_like(self.scores) * score_init_constant
         )
         # nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
         self.discrete = False
