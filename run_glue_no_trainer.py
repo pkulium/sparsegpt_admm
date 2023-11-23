@@ -615,12 +615,12 @@ def main():
 
         # set up prune rate and tempeatrue
         args.T = 1 / ((1 - 0.03) * (1 - epoch / args.num_train_epochs) + 0.03)
-        # if epoch < ts:
-        #         args.prune_rate = 1
-        # elif epoch < te:
-        #     args.prune_rate = pr_target + (pr_start - pr_target)*(1-(epoch-ts)/(te-ts))**3
-        # else:
-        #     args.prune_rate = pr_target
+        if epoch < ts:
+                args.prune_rate = 1
+        elif epoch < te:
+            args.prune_rate = pr_target + (pr_start - pr_target)*(1-(epoch-ts)/(te-ts))**3
+        else:
+            args.prune_rate = pr_target
 
         model.train()
         if args.with_tracking:
