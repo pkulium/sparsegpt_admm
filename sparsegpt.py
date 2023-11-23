@@ -720,7 +720,7 @@ class SparseGPT:
         if DEBUG:
             print(f'self.layer.weight:{self.layer.weight}')
             print(f'temp_model.weight_mask.data:{temp_model.weight_mask.data}')
-            print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
+            print(f'delta:{torch.sum((self.layer(self.inp1) - self.out1) ** 2)}')
     
         del model
         del dataset
