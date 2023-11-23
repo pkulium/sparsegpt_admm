@@ -216,6 +216,25 @@ def parse_args():
 
     return args
 
+from sparse_op import VRPGE_Linear
+def replace_linear_layers(model, target_module=None):
+    for name, module in model.named_children():
+        if isinstance(module, torch.nn.Linear):
+            # Create a new VRPGE_Linear layer with the same parameters
+            new_layer = VRPGE_Linear(module.in_features, module.out_features, bias=(module.bias is not None))
+
+            # Copy weights and biases from the old layer
+            new_layer.weight.data = module.weight.data.clone()
+            if module.bias is not None:
+                new_layer.bias.data = module.bias.data.clone()
+
+            # Replace the old layer with the new one in the model
+            setattr(model, name, new_layer)
+        else:
+            # Recursively apply the same replacement to child modules
+            replace_linear_layers(module)
+    return model
+
 
 def main():
     args = parse_args()
@@ -335,6 +354,8 @@ def main():
         ignore_mismatched_sizes=args.ignore_mismatched_sizes,
         trust_remote_code=args.trust_remote_code,
     )
+
+    model = replace_linear_layers(model)
 
     # Preprocessing the datasets
     if args.task_name is not None:
