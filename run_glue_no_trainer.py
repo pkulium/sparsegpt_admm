@@ -235,6 +235,44 @@ def replace_linear_layers(model, target_module=None):
             replace_linear_layers(module)
     return model
 
+def solve_v_total(model, total, prune_rate):
+    k = total * prune_rate
+    a, b = 0, 0
+    for n, m in model.named_modules():
+        if hasattr(m, "scores"):
+            b = max(b, m.scores.max())
+    def f(v):
+        s = 0
+        for n, m in model.named_modules():
+            if hasattr(m, "scores"):
+                s += (m.scores - v).clamp(0, 1).sum()
+        return s - k
+    if f(0) < 0:
+        return 0
+    itr = 0
+    while (1):
+        itr += 1
+        v = (a + b) / 2
+        obj = f(v)
+        if abs(obj) < 1e-3 or itr > 20:
+            break
+        if obj < 0:
+            b = v
+        else:
+            a = v
+    v = max(0, v)
+    return v
+
+def constrainScoreByWhole(model, prune_rate):
+    total = 0
+    for n, m in model.named_modules():
+        if hasattr(m, "scores"):
+            total += m.scores.nelement()
+    v = solve_v_total(model, total, prune_rate)
+    for n, m in model.named_modules():
+        if hasattr(m, "scores"):
+            m.scores.sub_(v).clamp_(0, 1)
+
 
 def main():
     args = parse_args()
@@ -579,12 +617,13 @@ def main():
             loss = loss / args.gradient_accumulation_steps
             accelerator.backward(loss)
             if step % args.gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
+                # add clipping
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 3)
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad()
                 progress_bar.update(1)
                 completed_steps += 1
-
             if isinstance(checkpointing_steps, int):
                 if completed_steps % checkpointing_steps == 0:
                     output_dir = f"step_{completed_steps}"
@@ -594,7 +633,9 @@ def main():
 
             if completed_steps >= args.max_train_steps:
                 break
-
+        with torch.no_grad():
+            prune_rate = 0.5
+            constrainScoreByWhole(model, prune_rate)
         model.eval()
         samples_seen = 0
         for step, batch in enumerate(eval_dataloader):
