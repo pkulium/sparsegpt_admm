@@ -217,7 +217,7 @@ class ProbMaskLinear(nn.Linear):
         self.subnet = None  # Mask
         self.train_weights = False
         nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
-        self.T = 1
+        self.args = args
 
     @property
     def clamped_scores(self):
@@ -229,7 +229,7 @@ class ProbMaskLinear(nn.Linear):
     def forward(self, x):
         if not self.train_weights:  # training
             eps = 1e-20
-            temp = self.T
+            temp = self.args.T
             uniform0 = torch.rand_like(self.scores)
             uniform1 = torch.rand_like(self.scores)
             noise = -torch.log(torch.log(uniform0 + eps) / torch.log(uniform1 + eps) + eps)

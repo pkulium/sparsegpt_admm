@@ -217,7 +217,7 @@ def parse_args():
     return args
 
 from sparse_op import ProbMaskLinear
-def replace_linear_layers(model, target_module=None):
+def replace_linear_layers(model, args, target_module=None):
     for name, module in model.named_children():
         if isinstance(module, torch.nn.Linear):
             # Create a new VRPGE_Linear layer with the same parameters
@@ -227,12 +227,12 @@ def replace_linear_layers(model, target_module=None):
             new_layer.weight.data = module.weight.data.clone()
             if module.bias is not None:
                 new_layer.bias.data = module.bias.data.clone()
-
+            new_layer.args = args
             # Replace the old layer with the new one in the model
             setattr(model, name, new_layer)
         else:
             # Recursively apply the same replacement to child modules
-            replace_linear_layers(module)
+            replace_linear_layers(module, args)
     return model
 
 def solve_v_total(model, total, prune_rate):
@@ -393,7 +393,7 @@ def main():
         trust_remote_code=args.trust_remote_code,
     )
 
-    model = replace_linear_layers(model)
+    model = replace_linear_layers(model, args)
 
     # Preprocessing the datasets
     if args.task_name is not None:
@@ -496,17 +496,21 @@ def main():
         {
             "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay) and "scores" not in n],
             "weight_decay": args.weight_decay,
+            "lr":args.learning_rate
         },
         {
             "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay) and "scores" not in n],
             "weight_decay": 0.0,
+            "lr":args.learning_rate
         },
         {
             "params": [p for n, p in model.named_parameters() if "scores" in n],
             "weight_decay": 0.0,
+            "lr":2e-3
         },
     ]
-    optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.learning_rate)
+    # optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.learning_rate)
+    optimizer = torch.optim.AdamW(optimizer_grouped_parameters)
 
     # Scheduler and math around the number of training steps.
     overrode_max_train_steps = False
@@ -599,7 +603,25 @@ def main():
     # update the progress_bar if load from checkpoint
     progress_bar.update(completed_steps)
 
+    # set up prune rate
+    args.prune_rate = 0.5
+    pr_target = args.prune_rate
+    pr_start = 1.0
+    ts, te = 0.16, 0.6
+    ts = int(ts * args.num_train_epochs)
+    te = int(te * args.num_train_epochs)
+
     for epoch in range(starting_epoch, args.num_train_epochs):
+
+        # set up prune rate and tempeatrue
+        args.T = 1 / ((1 - 0.03) * (1 - epoch / args.num_train_epochs) + 0.03)
+        if epoch < ts:
+                args.prune_rate = 1
+        elif epoch < te:
+            args.prune_rate = pr_target + (pr_start - pr_target)*(1-(epoch-ts)/(te-ts))**3
+        else:
+            args.prune_rate = pr_target
+
         model.train()
         if args.with_tracking:
             total_loss = 0
