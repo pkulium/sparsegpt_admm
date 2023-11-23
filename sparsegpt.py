@@ -704,15 +704,15 @@ class SparseGPT:
                         temp_model = mask_solve(temp_model,train_loader, self.dev)
                     # Calculate loss
                     current_loss = torch.sum((temp_model(self.inp1.to(torch.float32)) - self.out1.to(torch.float32)) ** 2).item()
-                    
+
                     self.layer.weight.data = (temp_model.weight_mask.data * temp_model.weight.data).to(dtype)
                     # Update best hyperparameters if current loss is lower
-                    if current_loss < min_loss:
-                        min_loss = current_loss
-                        best_lr = lr
-                        best_weight_lr = weight_lr
-                        best_max_iter = max_iter
-                        self.layer.weight.data = (temp_model.weight_mask.data * temp_model.weight.data).to(dtype)
+                    # if current_loss < min_loss:
+                    #     min_loss = current_loss
+                    #     best_lr = lr
+                    #     best_weight_lr = weight_lr
+                    #     best_max_iter = max_iter
+                    #     self.layer.weight.data = (temp_model.weight_mask.data * temp_model.weight.data).to(dtype)
 
         # Print the best hyperparameters and the corresponding loss
         print(f"Best lr: {best_lr}, Best best_weight_lr: {best_weight_lr}, Best max_iter: {best_max_iter}, Minimum Loss: {min_loss}")
