@@ -719,7 +719,8 @@ class SparseGPT:
         print(f"Best lr: {best_lr}, Best best_weight_lr: {best_weight_lr}, Best max_iter: {best_max_iter}, Minimum Loss: {min_loss}")
 
         if DEBUG:
-            print(self.layer.weight)
+            print(f'self.layer.weight:{self.layer.weight}')
+            print(f'temp_model.weight_mask.data:{temp_model.weight_mask.data}')
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
     
         del model
