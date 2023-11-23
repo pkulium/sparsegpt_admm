@@ -408,7 +408,9 @@ def mask_solve(net, train_dataloader, device):
             # step 2: calculate loss and update the mask values
             optimizer.zero_grad()
             outputs = net.forward(inputs)
-            loss = criterion(outputs, targets)  # Compute the loss
+            # loss = criterion(outputs, targets)  # Compute the loss
+            loss = (torch.sum(outputs - targets) ** 2)
             loss.backward()
+            optimizer.step()
         if epoch % 10 == 0:
             print(f"Epoch {epoch}, Loss: {loss.item()}")
