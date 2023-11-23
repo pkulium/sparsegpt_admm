@@ -388,7 +388,6 @@ def mask_solve(net, train_dataloader, device):
     for layer in net.modules():
         if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
             layer.weight_mask = nn.Parameter((layer.weight.data != 0).float())
-            print(layer.weight_mask.data)
             layer.weight_mask.requires_grad = False
 
         # Override the forward methods:
