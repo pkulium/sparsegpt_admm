@@ -464,7 +464,7 @@ def main():
             "weight_decay": 0.0,
         },
         {
-            "params": [p for n, p in model.named_parameters() if "scores" not in n],
+            "params": [p for n, p in model.named_parameters() if "scores" in n],
             "weight_decay": 0.0,
         },
     ]
