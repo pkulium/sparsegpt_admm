@@ -670,6 +670,7 @@ class SparseGPT:
         out_features, in_features = self.layer.weight.shape
         # model = VRPGE(in_features=in_features, out_features=out_features, bias=True).to(self.dev)
         model = copy.deepcopy(self.layer)
+        model.bias = None
         # Clone and reshape the input
         input = self.inp1.clone().squeeze(0) 
         output = self.out1.clone().squeeze(0) 

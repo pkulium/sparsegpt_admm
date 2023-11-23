@@ -24,7 +24,7 @@ def snip_forward_linear(self, x):
         return F.linear(x, self.weight * self.weight_mask, self.bias)
 
 
-def SNIP(net, keep_ratio, train_dataloader, device):
+def SNIP(model, keep_ratio, train_dataloader, device):
     # TODO: shuffle?
 
     # Grab a single batch from the training dataset
@@ -32,13 +32,13 @@ def SNIP(net, keep_ratio, train_dataloader, device):
     inputs = inputs.to(device)
     targets = targets.to(device)
 
-    # Let's create a fresh copy of the network so that we're not worried about
+    # Let's create a fresh copy of the modelwork so that we're not worried about
     # affecting the actual training-phase
-    net = copy.deepcopy(net)
+    model = copy.deepcopy(model)
 
     # Monkey-patch the Linear and Conv2d layer to learn the multiplicative mask
     # instead of the weights
-    for layer in net.modules():
+    for layer in model.modules():
         if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
             layer.weight_mask = nn.Parameter(torch.ones_like(layer.weight))
             nn.init.xavier_normal_(layer.weight_mask)
@@ -53,14 +53,14 @@ def SNIP(net, keep_ratio, train_dataloader, device):
             layer.forward = types.MethodType(snip_forward_linear, layer)
 
     # Compute gradients (but don't apply them)
-    net.zero_grad()
-    outputs = net.forward(inputs)
+    model.zero_grad()
+    outputs = model.forward(inputs)
     criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
     loss = criterion(outputs, targets)  # Compute the loss
     loss.backward()
 
     grads_abs = []
-    for layer in net.modules():
+    for layer in model.modules():
         if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
             grads_abs.append(torch.abs(layer.weight_mask.grad))
 
@@ -95,16 +95,16 @@ def sparsity_loss(tensor):
     return total_loss
 
 
-def PGD(net, keep_ratio, train_dataloader, device):
+def PGD(model, keep_ratio, train_dataloader, device):
 
-    # Let's create a fresh copy of the network so that we're not worried about
+    # Let's create a fresh copy of the modelwork so that we're not worried about
     # affecting the actual training-phase
-    # net = copy.deepcopy(net)
+    # model = copy.deepcopy(model)
 
     # Monkey-patch the Linear and Conv2d layer to learn the multiplicative mask
     # instead of the weights
 
-    # for layer in net.modules():
+    # for layer in model.modules():
     #     if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
     #         layer.weight_mask = nn.Parameter(torch.zeros_like(layer.weight))
     #         # nn.init.xavier_normal_(layer.weight_mask)
@@ -120,40 +120,40 @@ def PGD(net, keep_ratio, train_dataloader, device):
     #     if isinstance(layer, nn.Linear):
     #         layer.forward = types.MethodType(snip_forward_linear, layer)
 
-    # W_metric = torch.abs(net.weight.data)
-    # thresh = torch.sort(W_metric.flatten().cuda())[0][int(net.weight.numel()*keep_ratio)].cpu()
+    # W_metric = torch.abs(model.weight.data)
+    # thresh = torch.sort(W_metric.flatten().cuda())[0][int(model.weight.numel()*keep_ratio)].cpu()
     # W_mask = (W_metric<=thresh).int()
     criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
-    # mask_optimizer = torch.optim.SGD([net.weight_mask], lr=0.001, momentum=0.9)
-    mask_optimizer = torch.optim.AdamW([net.weight], lr=0.01)
+    # mask_optimizer = torch.optim.SGD([model.weight_mask], lr=0.001, momentum=0.9)
+    mask_optimizer = torch.optim.AdamW([model.weight], lr=0.01)
     rho = 0.001  # You can adjust tsshis value to change the strength of the regularization
     total_epoch = 1000
-    total_param = net.weight.shape[0] * net.weight.shape[1]
+    total_param = model.weight.shape[0] * model.weight.shape[1]
     for epoch in range(total_epoch):
         for i, (inputs, targets) in enumerate(train_dataloader):
             inputs, targets = inputs.to(device), targets.to(device)
 
             # step 2: calculate loss and update the mask values
             mask_optimizer.zero_grad()
-            net.weight.data.copy_(net.weight_org)
-            outputs = net.forward(inputs)
+            model.weight.data.copy_(model.weight_org)
+            outputs = model.forward(inputs)
             loss = criterion(outputs, targets)  # Compute the loss
-            # loss_reg = sparsity_loss(net.weight)
-            loss_reg = net.weight.abs().sum()
+            # loss_reg = sparsity_loss(model.weight)
+            loss_reg = model.weight.abs().sum()
             loss += loss_reg
             loss.backward()
             mask_optimizer.step()
-            clip_mask(net)
-            net.weight_org.data.copy_(net.weight.data.clamp_(0,1))
+            clip_mask(model)
+            model.weight_org.data.copy_(model.weight.data.clamp_(0,1))
         if epoch % 10 == 0:
             print(f"Epoch {epoch}, Loss: {loss.item()}")
             if epoch % 100 == 0:
-                print(net.weight)
+                print(model.weight)
     
-    # num_params_to_keep = int(net.weight_mask.shape[0] * net.weight_mask.shape[1] * keep_ratio)
-    # threshold, _ = torch.topk(torch.flatten(net.weight_mask), num_params_to_keep, sorted=True)
+    # num_params_to_keep = int(model.weight_mask.shape[0] * model.weight_mask.shape[1] * keep_ratio)
+    # threshold, _ = torch.topk(torch.flatten(model.weight_mask), num_params_to_keep, sorted=True)
     # acceptable_score = threshold[-1]
-    # keep_masks = net.weight_mask > acceptable_score
+    # keep_masks = model.weight_mask > acceptable_score
     # return keep_masks
 
 
@@ -257,7 +257,7 @@ def VRPGE_solve(model, keep_ratio, train_loader, device):
                 original_loss = criterion(output.view(target.shape), target)
                 # original_loss = torch.sum((target - output) ** 2)
                 # print(f'original_loss:{original_loss}')
-                # print(f'subnet:{model.subnet}')
+                # print(f'submodel:{model.submodel}')
                 loss = original_loss/K
                 fn_list.append(loss.item()*K)
                 loss.backward(retain_graph=True)
@@ -382,10 +382,10 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
             # print(f'loss: {loss}')
     return model
 
-def mask_solve(net, train_dataloader, device):
+def mask_solve(model, train_dataloader, device):
     # Monkey-patch the Linear and Conv2d layer to learn the multiplicative mask
     # instead of the weights
-    for layer in net.modules():
+    for layer in model.modules():
         if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
             layer.weight_mask = nn.Parameter((layer.weight.data != 0).float())
             layer.weight_mask.requires_grad = False
@@ -398,18 +398,18 @@ def mask_solve(net, train_dataloader, device):
             layer.forward = types.MethodType(snip_forward_linear, layer)
 
     criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
-    # mask_optimizer = torch.optim.SGD([net.weight_mask], lr=0.001, momentum=0.9)
-    optimizer = torch.optim.AdamW([net.weight], lr=0.0001)
+    # mask_optimizer = torch.optim.SGD([model.weight_mask], lr=0.001, momentum=0.9)
+    optimizer = torch.optim.AdamW([model.weight], lr=0.0001)
     total_epoch = 100
     for epoch in range(total_epoch):
         for i, (inputs, targets) in enumerate(train_dataloader):
             inputs, targets = inputs.to(device), targets.to(device)
             # step 2: calculate loss and update the mask values
             optimizer.zero_grad()
-            outputs = net.forward(inputs)
+            outputs = model.forward(inputs)
             # loss = criterion(outputs, targets)  # Compute the loss
             loss = (torch.sum(outputs - targets) ** 2)
             loss.backward()
             optimizer.step()
     print(f"Epoch {epoch}, Loss: {loss.item()}")
-    return net
+    return model
