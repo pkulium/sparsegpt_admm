@@ -213,10 +213,15 @@ import math
 class ProbMaskLinear(nn.Linear):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.scores = nn.Parameter(torch.Tensor(self.weight.size()))  # Probability
+        # self.scores = nn.Parameter(torch.Tensor(self.weight.size()))  # Probability
+        self.scores = nn.Parameter(torch.ones_like(self.weight))  # Probability
         self.subnet = None  # Mask
         self.train_weights = False
-        nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
+        # nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
+        score_init_constant = 0.5
+        self.scores.data = (
+            torch.ones_like(self.scores) * score_init_constant
+        )
         self.args = args
 
     @property

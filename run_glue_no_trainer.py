@@ -656,7 +656,6 @@ def main():
             if completed_steps >= args.max_train_steps:
                 break
         with torch.no_grad():
-            prune_rate = 0.5
             constrainScoreByWhole(model, args.prune_rate)
         model.eval()
         samples_seen = 0
