@@ -415,3 +415,4 @@ def mask_solve(net, train_dataloader, device):
             optimizer.step()
         if epoch % 10 == 0:
             print(f"Epoch {epoch}, Loss: {loss.item()}")
+    return net
