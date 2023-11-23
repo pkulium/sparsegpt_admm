@@ -381,3 +381,33 @@ def Probmask_solve(model, prune_rate, train_loader, device, lr = 12e-3, epochs =
         # if epoch % 10 == 0:
             # print(f'loss: {loss}')
     return model
+
+def mask_solve(net, train_dataloader, device):
+    # Monkey-patch the Linear and Conv2d layer to learn the multiplicative mask
+    # instead of the weights
+    for layer in net.modules():
+        if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+            layer.weight_mask = nn.Parameter((layer.weight.data != 0).float())
+            layer.weight_mask.requires_grad = False
+
+        # Override the forward methods:
+        if isinstance(layer, nn.Conv2d):
+            layer.forward = types.MethodType(snip_forward_conv2d, layer)
+
+        if isinstance(layer, nn.Linear):
+            layer.forward = types.MethodType(snip_forward_linear, layer)
+
+    criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
+    # mask_optimizer = torch.optim.SGD([net.weight_mask], lr=0.001, momentum=0.9)
+    optimizer = torch.optim.AdamW([net.weight], lr=0.01)
+    total_epoch = 100
+    for epoch in range(total_epoch):
+        for i, (inputs, targets) in enumerate(train_dataloader):
+            inputs, targets = inputs.to(device), targets.to(device)
+            # step 2: calculate loss and update the mask values
+            optimizer.zero_grad()
+            outputs = net.forward(inputs)
+            loss = criterion(outputs, targets)  # Compute the loss
+            loss.backward()
+        if epoch % 10 == 0:
+            print(f"Epoch {epoch}, Loss: {loss.item()}")
