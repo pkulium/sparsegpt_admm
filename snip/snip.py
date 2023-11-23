@@ -413,6 +413,5 @@ def mask_solve(net, train_dataloader, device):
             loss = (torch.sum(outputs - targets) ** 2)
             loss.backward()
             optimizer.step()
-        if epoch % 10 == 0:
-            print(f"Epoch {epoch}, Loss: {loss.item()}")
+    print(f"Epoch {epoch}, Loss: {loss.item()}")
     return net
