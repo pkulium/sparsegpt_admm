@@ -680,7 +680,7 @@ class SparseGPT:
 
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
-        train_loader = DataLoader(dataset, batch_size=256, shuffle=True)
+        train_loader = DataLoader(dataset, batch_size=len(dataset), shuffle=True)
         # Define your hyperparameter grids
         lr_values = [0.1]
         weight_lr_values = [0.01]

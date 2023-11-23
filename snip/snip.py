@@ -399,7 +399,7 @@ def mask_solve(net, train_dataloader, device):
 
     criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
     # mask_optimizer = torch.optim.SGD([net.weight_mask], lr=0.001, momentum=0.9)
-    optimizer = torch.optim.AdamW([net.weight], lr=0.1)
+    optimizer = torch.optim.AdamW([net.weight], lr=0.001)
     total_epoch = 100
     for epoch in range(total_epoch):
         for i, (inputs, targets) in enumerate(train_dataloader):
