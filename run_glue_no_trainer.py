@@ -657,7 +657,7 @@ def main():
                 break
         with torch.no_grad():
             prune_rate = 0.5
-            constrainScoreByWhole(model, prune_rate)
+            constrainScoreByWhole(model, args.prune_rate)
         model.eval()
         samples_seen = 0
         for step, batch in enumerate(eval_dataloader):
