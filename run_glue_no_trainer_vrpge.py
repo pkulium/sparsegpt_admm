@@ -646,7 +646,7 @@ def main():
                 accelerator.backward(loss)
                 l = l + loss.item()
             fn_avg = l
-            # calculateGrad(model, fn_avg, fn_list, args)
+            calculateGrad(model, fn_avg, fn_list, args)
             # We keep track of the loss at each epoch
             if args.with_tracking:
                 total_loss += loss.detach().float()
