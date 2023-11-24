@@ -198,6 +198,24 @@ def parse_args():
         action="store_true",
         help="Whether or not to enable to load a pretrained model whose head dimensions are different.",
     )
+    parser.add_argument(
+        "--K",
+        type=int,
+        default=2,
+        help="Number of sample net",
+    )
+    parser.add_argument(
+        "--prune_rate",
+        type=float,
+        default=0.5,
+        help="prune rate.",
+    )
+    parser.add_argument(
+        "--mask_learning_rate",
+        type=float,
+        default=5e-3,
+        help="Initial learning rate (after the potential warmup period) to use.",
+    )
     args = parser.parse_args()
 
     # Sanity checks
@@ -510,7 +528,7 @@ def main():
         {
             "params": [p for n, p in model.named_parameters() if "scores" in n],
             "weight_decay": 0.0,
-            "lr":2e-3,
+            "lr":args.mask_learning_rate,
         },
     ]
     # optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.learning_rate)
