@@ -635,7 +635,7 @@ def main():
         else:
             active_dataloader = train_dataloader
         for step, batch in enumerate(active_dataloader):
-            args.K = 20
+            args.K = 2
             l = 0
             fn_list = []
             for j in range(args.K):
@@ -646,7 +646,7 @@ def main():
                 accelerator.backward(loss)
                 l = l + loss.item()
             fn_avg = l
-            calculateGrad(model, fn_avg, fn_list, args)
+            # calculateGrad(model, fn_avg, fn_list, args)
             # We keep track of the loss at each epoch
             if args.with_tracking:
                 total_loss += loss.detach().float()
