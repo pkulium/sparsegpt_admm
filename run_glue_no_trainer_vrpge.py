@@ -635,7 +635,7 @@ def main():
         else:
             active_dataloader = train_dataloader
         for step, batch in enumerate(active_dataloader):
-            args.K = 2
+            args.K = 10
             l = 0
             fn_list = []
             for j in range(args.K):
