@@ -510,7 +510,7 @@ def main():
         {
             "params": [p for n, p in model.named_parameters() if "scores" in n],
             "weight_decay": 0.0,
-            "lr":args.learning_rate
+            "lr":2e-3,
         },
     ]
     # optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.learning_rate)
