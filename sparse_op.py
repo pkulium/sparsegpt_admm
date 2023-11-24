@@ -266,7 +266,6 @@ class VRPGE_Linear(nn.Linear):
         self.prune = True
         self.register_buffer("stored_mask_0", torch.zeros_like(self.scores))
         self.register_buffer("stored_mask_1", torch.zeros_like(self.scores))
-        self.j = 0
 
     @property
     def clamped_scores(self):
@@ -280,7 +279,7 @@ class VRPGE_Linear(nn.Linear):
         if self.prune:
             if not self.train_weights:
                 self.subnet = StraightThroughBinomialSampleNoGrad.apply(self.scores) 
-                if self.j == 0:
+                if self.args.j == 0:
                     self.stored_mask_0.data = (self.subnet-self.scores)/torch.sqrt((self.scores+1e-20)*(1-self.scores+1e-20))
                 else:
                     self.stored_mask_1.data = (self.subnet-self.scores)/torch.sqrt((self.scores+1e-20)*(1-self.scores+1e-20))
