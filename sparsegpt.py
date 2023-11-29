@@ -265,37 +265,6 @@ class SparseGPT:
     def faster_snip_prune(
         self, sparsity, prunen=0, prunem=0, blocksize=128, percdamp=.01
     ):
-        W = self.layer.weight.data.clone()
-        if isinstance(self.layer, nn.Conv2d):
-            W = W.flatten(1)
-        if isinstance(self.layer, transformers.Conv1D):
-            W = W.t()
-        W = W.float()
-
-        if hasattr(self, 'quantizer'):
-            if not self.quantizer.ready():
-                self.quantizer.find_params(W, weight=True)
-
-        tick = time.time()
-
-        H = self.H
-        del self.H
-        dead = torch.diag(H) == 0
-        H[dead, dead] = 1
-        W[:, dead] = 0
-
-        Losses = torch.zeros(self.rows, device=self.dev)
-
-        damp = percdamp * torch.mean(torch.diag(H))
-        diag = torch.arange(self.columns, device=self.dev)
-        H[diag, diag] += damp
-        H = torch.linalg.cholesky(H)
-        H = torch.cholesky_inverse(H)
-        H = torch.linalg.cholesky(H, upper=True)
-        Hinv = H
-
-        mask = None
-
         # apply mask from snip
         model = copy.deepcopy(self.layer)
         input = self.inp1.clone().squeeze(0) 
@@ -307,7 +276,7 @@ class SparseGPT:
 
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
-        train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+        train_loader = DataLoader(dataset, batch_size=128, shuffle=True)
         with torch.enable_grad():
             model.train()
             mask = SNIP_solve(model, train_loader, 0.01, 100, 0.5, 0.001)

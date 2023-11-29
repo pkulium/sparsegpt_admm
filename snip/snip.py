@@ -124,6 +124,7 @@ def SNIP_solve(model, train_loader, lr, max_iter, rho, tol):
             layer.weight_mask = nn.Parameter(torch.ones_like(layer.weight))
             nn.init.xavier_normal_(layer.weight_mask)
             layer.weight.requires_grad = False
+            layer.weight_mask.requires_grad = True
             
         # Override the forward methods:
         if isinstance(layer, nn.Conv2d):
