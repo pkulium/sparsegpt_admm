@@ -181,7 +181,7 @@ def SNIP_solve(model, train_loader, lr, max_iter, rho, tol):
     if DEBUG:
         print(f'primal_res:{primal_res}')
         print(f'dual_res:{dual_res}')
-    return W
+    return model.weight_mask
 
 
 def sparsity_loss(tensor):

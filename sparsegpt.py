@@ -305,7 +305,7 @@ class SparseGPT:
                         mask = SNIP_solve(model, train_loader, lr, max_iter, rho, 0.001)
                     # Calculate loss
                     # current_loss = torch.sum((temp_model(self.inp1) - self.out1) ** 2).item()
-                    self.layer.weight.data = temp_model.weight_mask.data @ self.layer.weight.data
+                    self.layer.weight.data = mask.data @ self.layer.weight.data
                     # Update best hyperparameters if current loss is lower
                     # if current_loss < min_loss:
                         # min_loss = current_loss
