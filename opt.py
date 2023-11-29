@@ -333,8 +333,8 @@ if __name__ == '__main__':
         assert has_wandb, "wandb not installed try `pip install wandb`"
         wandb.init(config=args)
 
-    # model = get_opt(args.model)
-    model = get_opt('/work/LAS/wzhang-lab/mingl/code/lora/sparsegpt/sparse_opt/opt-125m')
+    model = get_opt(args.model)
+    # model = get_opt('/work/LAS/wzhang-lab/mingl/code/lora/sparsegpt/sparse_opt/opt-125m')
     model.eval()
 
     dataloader, testloader = get_loaders(
