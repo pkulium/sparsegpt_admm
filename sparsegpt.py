@@ -282,6 +282,11 @@ class SparseGPT:
         rho_values = [0.001, 0.01, 0.1]
         max_iter_values = [10, 100]
 
+        lr_values = [0.01]
+        rho_values = [0.1]
+        max_iter_values = [100]
+
+
         # Initialize variables to store the best hyperparameters and the corresponding minimum loss
         best_lr = None
         best_rho = None
@@ -299,16 +304,15 @@ class SparseGPT:
                     with torch.enable_grad():
                         mask = SNIP_solve(model, train_loader, lr, max_iter, rho, 0.001)
                     # Calculate loss
-                    # temp_model.weight.data = temp_model.weight.data.to(self.layer.weight.data.dtype)
-                    current_loss = torch.sum((temp_model(self.inp1) - self.out1) ** 2).item()
-
+                    # current_loss = torch.sum((temp_model(self.inp1) - self.out1) ** 2).item()
+                    self.layer.weight.data = temp_model.weight_mask.data @ self.layer.weight.data
                     # Update best hyperparameters if current loss is lower
-                    if current_loss < min_loss:
-                        min_loss = current_loss
-                        best_lr = lr
-                        best_rho = rho
-                        best_max_iter = max_iter
-                        self.layer.weight.data = temp_model.weight_mask.data @ self.layer.weight.data
+                    # if current_loss < min_loss:
+                        # min_loss = current_loss
+                        # best_lr = lr
+                        # best_rho = rho
+                        # best_max_iter = max_iter
+                        # self.layer.weight.data = temp_model.weight_mask.data @ self.layer.weight.data
 
         # Print the best hyperparameters and the corresponding loss
         print(f"Best lr: {best_lr}, Best rho: {best_rho}, Best max_iter: {best_max_iter}, Minimum Loss: {min_loss}")
