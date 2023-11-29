@@ -276,82 +276,52 @@ class SparseGPT:
 
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
-        train_loader = DataLoader(dataset, batch_size=128, shuffle=True)
-        with torch.enable_grad():
-            model.train()
-            mask = SNIP_solve(model, train_loader, 0.01, 100, 0.5, 0.001)
+        train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+         # Define your hyperparameter grids
+        lr_values = [0.001, 0.01, 0.1]
+        rho_values = [0.001, 0.01, 0.1]
+        max_iter_values = [10, 100]
+
+        # Initialize variables to store the best hyperparameters and the corresponding minimum loss
+        best_lr = None
+        best_rho = None
+        best_max_iter = None
+        min_loss = float('inf')
+
+        # Grid search
+        for lr in lr_values:
+            for rho in rho_values:
+                for max_iter in max_iter_values:
+                    # Copy the model for each iteration to avoid cumulative training effects
+                    temp_model = copy.deepcopy(model)
+                    temp_model.train()
+
+                    with torch.enable_grad():
+                        mask = SNIP_solve(model, train_loader, lr, max_iter, rho, 0.001)
+                    # Calculate loss
+                    # temp_model.weight.data = temp_model.weight.data.to(self.layer.weight.data.dtype)
+                    current_loss = torch.sum((temp_model(self.inp1) - self.out1) ** 2).item()
+
+                    # Update best hyperparameters if current loss is lower
+                    if current_loss < min_loss:
+                        min_loss = current_loss
+                        best_lr = lr
+                        best_rho = rho
+                        best_max_iter = max_iter
+                        self.layer.weight.data = temp_model.weight_mask.data @ self.layer.weight.data
+
+        # Print the best hyperparameters and the corresponding loss
+        print(f"Best lr: {best_lr}, Best rho: {best_rho}, Best max_iter: {best_max_iter}, Minimum Loss: {min_loss}")
+        print(f'self.layer.weight.data:{self.layer.weight.data}')
+
         del model
         del dataset
         del train_loader
-        mask = mask.to(torch.bool)
-        # self.layer.weight.data[mask] = 0
-        # return
-    
-        
-        for i1 in range(0, self.columns, blocksize):
-            i2 = min(i1 + blocksize, self.columns)
-            count = i2 - i1
 
-            W1 = W[:, i1:i2].clone()
-            Q1 = torch.zeros_like(W1)
-            Err1 = torch.zeros_like(W1)
-            Losses1 = torch.zeros_like(W1)
-            Hinv1 = Hinv[i1:i2, i1:i2]
-
-            if prunen == 0: 
-                if mask is not None:
-                    mask1 = mask[:, i1:i2]
-                else:
-                    tmp = W1 ** 2 / (torch.diag(Hinv1).reshape((1, -1))) ** 2
-                    thresh = torch.sort(tmp.flatten())[0][int(tmp.numel() * sparsity)]
-                    mask1 = tmp <= thresh
-            else:
-                mask1 = torch.zeros_like(W1) == 1
-
-            for i in range(count):
-                w = W1[:, i]
-                d = Hinv1[i, i]
-
-                if prunen != 0 and i % prunem == 0:
-                    tmp = W1[:, i:(i + prunem)] ** 2 / (torch.diag(Hinv1)[i:(i + prunem)].reshape((1, -1))) ** 2
-                    mask1.scatter_(1, i + torch.topk(tmp, prunen, dim=1, largest=False)[1], True)
-
-                q = w.clone()
-                q[mask1[:, i]] = 0
-
-                if hasattr(self, 'quantizer'):
-                    q = quantize(
-                        q.unsqueeze(1), self.quantizer.scale, self.quantizer.zero, self.quantizer.maxq
-                    ).flatten()
-
-                Q1[:, i] = q
-                Losses1[:, i] = (w - q) ** 2 / d ** 2
-
-                err1 = (w - q) / d
-                W1[:, i:] -= err1.unsqueeze(1).matmul(Hinv1[i, i:].unsqueeze(0))
-                Err1[:, i] = err1
-
-            W[:, i1:i2] = Q1
-            Losses += torch.sum(Losses1, 1) / 2
-
-            W[:, i2:] -= Err1.matmul(Hinv[i1:i2, i2:])
-
-            if DEBUG:
-                self.layer.weight.data[:, :i2] = W[:, :i2]
-                self.layer.weight.data[:, i2:] = W[:, i2:]
-                print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
-                print(torch.sum(Losses))
-
-        torch.cuda.synchronize()
-        print('time %.2f' % (time.time() - tick))
-        print('error', torch.sum(Losses).item())
-
-        if isinstance(self.layer, transformers.Conv1D):
-            W = W.t()
-        self.layer.weight.data = W.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
         if DEBUG:
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
 
+        
     def faster_pgd_prune(
         self, sparsity, prunen=0, prunem=0, blocksize=128, percdamp=.01
     ):
