@@ -9,9 +9,6 @@ from torchvision.transforms import Compose, ToTensor, Normalize
 from torchvision import transforms
 
 from tensorboardX import SummaryWriter
-from ignite.engine import Events, create_supervised_trainer, create_supervised_evaluator
-from ignite.metrics import Accuracy, Loss
-from ignite.contrib.handlers import ProgressBar
 
 # from snip import SNIP
 
