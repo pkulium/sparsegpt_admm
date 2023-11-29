@@ -5,9 +5,10 @@ import torch.nn.functional as F
 import copy
 import types
 
-import abc
-import tqdm
-import wandb
+from typing import Union, Dict, Tuple
+
+DEBUG = True
+TensorType = Union[torch.Tensor, np.ndarray]
 
 def clip_mask(model, lower=0.0, upper=1.0):
     params = [param for name, param in model.named_parameters() if 'neuron_mask' in name]
@@ -80,6 +81,107 @@ def SNIP(model, keep_ratio, train_dataloader, device):
     # print(torch.sum(torch.cat([torch.flatten(x == 1) for x in keep_masks])))
 
     return(keep_masks)
+
+def maskNxM(
+    parameter: TensorType,
+    n: int,
+    m: int
+) -> TensorType:
+    """
+    Accepts either a torch.Tensor or numpy.ndarray and generates a floating point mask of 1's and 0's
+    corresponding to the locations that should be retained for NxM pruning. The appropriate ranking mechanism
+    should already be built into the parameter when this method is called.
+    """
+
+    if type(parameter) is torch.Tensor:
+        out_neurons, in_neurons = parameter.size()
+
+        with torch.no_grad():
+            groups = parameter.reshape(out_neurons, -1, n)
+            zeros = torch.zeros(1, 1, 1, device=parameter.device)
+            ones = torch.ones(1, 1, 1, device=parameter.device)
+
+            percentile = m / n
+            quantiles = torch.quantile(groups, percentile, -1, keepdim=True)
+            mask = torch.where(groups > quantiles, ones, zeros).reshape(out_neurons, in_neurons)
+    else:
+        out_neurons, in_neurons = parameter.shape
+        percentile = (100 * m) / n
+
+        groups = parameter.reshape(out_neurons, -1, n)
+        group_thresholds = np.percentile(groups, percentile, axis=-1, keepdims=True)
+        mask = (groups > group_thresholds).astype(np.float32).reshape(out_neurons, in_neurons)
+
+    return mask
+
+import numpy as np
+M, N = 4, 2
+def SNIP_solve(model, train_loader, lr, max_iter, rho, tol):
+    # Monkey-patch the Linear and Conv2d layer to learn the multiplicative mask
+    # instead of the weights
+    for layer in model.modules():
+        if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+            layer.weight_mask = nn.Parameter(torch.ones_like(layer.weight))
+            nn.init.xavier_normal_(layer.weight_mask)
+            layer.weight.requires_grad = False
+            
+        # Override the forward methods:
+        if isinstance(layer, nn.Conv2d):
+            layer.forward = types.MethodType(snip_forward_conv2d, layer)
+
+        if isinstance(layer, nn.Linear):
+            layer.forward = types.MethodType(snip_forward_linear, layer)
+
+    device = 'cuda:0'
+    W = torch.zeros_like(model.weight.data)
+    u = torch.zeros_like(model.weight.data)
+
+    # Define the optimizer
+    optimizer = torch.optim.Adam([model.weight_mask], lr=lr)
+    # Define the learning rate scheduler
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max_iter)
+
+    # Assume train_loader is already defined and provides batches of (input, output_a)
+    for epoch in range(max_iter):  # Number of epochs
+        assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / max_iter)) * lr)
+        for input_tensor, label in train_loader:  # label is output_a
+            # admm_adjust_learning_rate(optimizer, epoch, config)
+            input_tensor, label = input_tensor.to(device), label.to(device)
+            optimizer.zero_grad()
+            # Forward pass
+            output_model = model(input_tensor)
+            # Compute the loss
+            # loss_mse = mse_loss(output_model, label) 
+            loss_mse = torch.sum((output_model - label) ** 2)
+            admm_loss = 0.5*rho*torch.linalg.norm(model.weight - W + u, "fro") ** 2
+            loss_mse += admm_loss
+            loss_mse.backward()
+            optimizer.step()
+            clip_mask(model)
+
+        # Update the learning rate
+        scheduler.step()
+
+        # Update W
+        with torch.no_grad():
+            values = model.weight.data + u
+            scores = values.abs()
+            mask = maskNxM(scores, M, N)
+            W = mask * values
+
+        # Update u
+        u += model.weight.data - W
+
+        # Check for convergence
+        primal_res = torch.norm(model.weight.data - W)
+        dual_res = torch.norm(-rho * (W - values))
+        if primal_res < tol and dual_res < tol:
+            break
+    if DEBUG:
+        print(f'primal_res:{primal_res}')
+        print(f'dual_res:{dual_res}')
+    return W
+
 
 def sparsity_loss(tensor):
     # Reshape tensor to expose each chunk of 4 as a separate row
