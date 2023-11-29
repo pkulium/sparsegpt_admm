@@ -112,7 +112,7 @@ def opt_sequential(model, dataloader, dev):
             print(i, name)
             print('Pruning ...')
             sparsity = args.sparsity
-            gpts[name].faster_mask_prune(
+            gpts[name].faster_snip_prune(
                 sparsity, prunen=args.prunen, prunem=args.prunem, percdamp=args.percdamp, blocksize=args.blocksize
             )
             # gpts[name].input = args.layer_calibrations[f'model.model.decoder.layers.{i}.{name}'][0].squeeze(0) 
