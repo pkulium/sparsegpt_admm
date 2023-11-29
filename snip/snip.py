@@ -6,6 +6,7 @@ import copy
 import types
 
 from typing import Union, Dict, Tuple
+import numpy as np
 
 DEBUG = True
 TensorType = Union[torch.Tensor, np.ndarray]
@@ -114,7 +115,6 @@ def maskNxM(
 
     return mask
 
-import numpy as np
 M, N = 4, 2
 def SNIP_solve(model, train_loader, lr, max_iter, rho, tol):
     # Monkey-patch the Linear and Conv2d layer to learn the multiplicative mask
