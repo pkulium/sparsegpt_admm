@@ -8,7 +8,7 @@ import transformers
 from quant import *
 
 
-DEBUG = True
+DEBUG = False
 
 torch.backends.cuda.matmul.allow_tf32 = False
 torch.backends.cudnn.allow_tf32 = False
@@ -265,7 +265,9 @@ class SparseGPT:
     def faster_snip_prune(
         self, sparsity, prunen=0, prunem=0, blocksize=128, percdamp=.01
     ):
+        print('-' * 64)
         # apply mask from snip
+        origin_dtype = self.layer.weight.dtype
         model = copy.deepcopy(self.layer)
         input = self.inp1.clone().squeeze(0) 
         output = self.out1.clone().squeeze(0) 
@@ -276,15 +278,15 @@ class SparseGPT:
 
         from torch.utils.data import TensorDataset, DataLoader
         dataset = TensorDataset(input, output)
-        train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+        train_loader = DataLoader(dataset, batch_size=len(dataset), shuffle=True)
          # Define your hyperparameter grids
         lr_values = [0.001, 0.01, 0.1]
-        rho_values = [0.001, 0.01, 0.1]
-        max_iter_values = [10, 100]
+        rho_values = [0.001, 0.01, 0.1 ,1, 10]
+        max_iter_values = [10, 50, 100]
 
-        lr_values = [0.01]
-        rho_values = [0.1]
-        max_iter_values = [100]
+        lr_values = [0.001]
+        rho_values = [0.001]
+        max_iter_values = [300]
 
 
         # Initialize variables to store the best hyperparameters and the corresponding minimum loss
@@ -292,6 +294,7 @@ class SparseGPT:
         best_rho = None
         best_max_iter = None
         min_loss = float('inf')
+        best_mask = None
 
         # Grid search
         for lr in lr_values:
@@ -302,19 +305,25 @@ class SparseGPT:
                     temp_model.train()
 
                     with torch.enable_grad():
-                        mask = SNIP_solve(model, train_loader, lr, max_iter, rho, 0.001)
+                        _, mask  = SNIP_solve(temp_model, train_loader, lr, max_iter, rho, 0.001)
+                    temp_model.weight_mask.data = mask.data
                     # Calculate loss
-                    # current_loss = torch.sum((temp_model(self.inp1) - self.out1) ** 2).item()
-                    print(mask)
-                    self.layer.weight.data = mask.data @ self.layer.weight.data
+                    if best_mask is None:
+                        best_mask = mask
+                    current_loss = torch.sum((temp_model(self.inp1.to(torch.float32)) - self.out1.to(torch.float32) ** 2)).item()
                     # Update best hyperparameters if current loss is lower
-                    # if current_loss < min_loss:
-                        # min_loss = current_loss
-                        # best_lr = lr
-                        # best_rho = rho
-                        # best_max_iter = max_iter
-                        # self.layer.weight.data = temp_model.weight_mask.data @ self.layer.weight.data
+                    if current_loss < min_loss:
+                        min_loss = current_loss
+                        best_lr = lr
+                        best_rho = rho
+                        best_max_iter = max_iter
+                        best_mask = mask
 
+        print(f'self.layer.weight.data:{self.layer.weight.data}')
+        print(f'best_mask:{best_mask}')
+        # self.layer.weight.data = best_mask.to(origin_dtype).data * self.layer.weight.data
+        self.layer.weight.data[~best_mask.bool()] = 0
+        print(f'self.layer.weight.data:{self.layer.weight.data}')
         # Print the best hyperparameters and the corresponding loss
         print(f"Best lr: {best_lr}, Best rho: {best_rho}, Best max_iter: {best_max_iter}, Minimum Loss: {min_loss}")
         print(f'self.layer.weight.data:{self.layer.weight.data}')
@@ -324,6 +333,7 @@ class SparseGPT:
         del train_loader
 
         if DEBUG:
+            print('diff:')
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
 
         

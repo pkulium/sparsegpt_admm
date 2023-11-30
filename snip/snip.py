@@ -119,10 +119,11 @@ M, N = 4, 2
 def SNIP_solve(model, train_loader, lr, max_iter, rho, tol):
     # Monkey-patch the Linear and Conv2d layer to learn the multiplicative mask
     # instead of the weights
+    init_constant = 0.5
     for layer in model.modules():
         if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-            layer.weight_mask = nn.Parameter(torch.ones_like(layer.weight))
-            nn.init.xavier_normal_(layer.weight_mask)
+            layer.weight_mask = nn.Parameter(torch.ones_like(layer.weight) * init_constant)
+            # nn.init.xavier_normal_(layer.weight_mask)
             layer.weight.requires_grad = False
             layer.weight_mask.requires_grad = True
             
@@ -141,10 +142,12 @@ def SNIP_solve(model, train_loader, lr, max_iter, rho, tol):
     optimizer = torch.optim.Adam([model.weight_mask], lr=lr)
     # Define the learning rate scheduler
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max_iter)
-
+    criterion = nn.MSELoss()
     # Assume train_loader is already defined and provides batches of (input, output_a)
     for epoch in range(max_iter):  # Number of epochs
-        assign_learning_rate(optimizer, 0.5 * (1 + np.cos(np.pi * epoch / max_iter)) * lr)
+        if DEBUG and epoch % 10 == 0:
+            print(f'model.weight_mask:{model.weight_mask[0:8, 0:8]}')
+            print(f'W:{W[0:8, 0:8]}')
         for input_tensor, label in train_loader:  # label is output_a
             # admm_adjust_learning_rate(optimizer, epoch, config)
             input_tensor, label = input_tensor.to(device), label.to(device)
@@ -152,18 +155,17 @@ def SNIP_solve(model, train_loader, lr, max_iter, rho, tol):
             # Forward pass
             output_model = model(input_tensor)
             # Compute the loss
-            # loss_mse = mse_loss(output_model, label) 
+            # loss_mse = criterion(output_model, label) 
             loss_mse = torch.sum((output_model - label) ** 2)
             admm_loss = 0.5*rho*torch.linalg.norm(model.weight - W + u, "fro") ** 2
+            print(f'loss_mse:{loss_mse}')
+            print(f'admm_loss:{admm_loss}')
             loss_mse += admm_loss
             loss_mse.backward()
             optimizer.step()
-            clip_mask(model)
+            model.weight_mask.data = torch.clamp(model.weight_mask.data, 0, 1)
 
-        # Update the learning rate
-        scheduler.step()
-
-        # Update W
+         # Update W
         with torch.no_grad():
             values = model.weight.data + u
             scores = values.abs()
@@ -173,15 +175,38 @@ def SNIP_solve(model, train_loader, lr, max_iter, rho, tol):
         # Update u
         u += model.weight.data - W
 
+        # Update the learning rate
+        scheduler.step()
+
+        # # Update W
+        # with torch.no_grad():
+        #     values = model.weight.data + u
+        #     scores = values.abs()
+        #     mask = maskNxM(scores, M, N)
+        #     W = mask * values
+
+        # # Update u
+        # u += model.weight.data - W
+
         # Check for convergence
         primal_res = torch.norm(model.weight.data - W)
         dual_res = torch.norm(-rho * (W - values))
         if primal_res < tol and dual_res < tol:
             break
+
+    with torch.no_grad():
+        values = model.weight.data + u
+        scores = values.abs()
+        mask = maskNxM(scores, M, N)
+        W = mask 
+        
     if DEBUG:
         print(f'primal_res:{primal_res}')
         print(f'dual_res:{dual_res}')
-    return model.weight_mask
+        print(f'model.weight_mask:{model.weight_mask[0:8, 0:8]}')
+        print(f'W:{W[0:8, 0:8]}')
+        
+    return model.weight_mask, W
 
 
 def sparsity_loss(tensor):
